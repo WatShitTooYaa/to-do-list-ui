@@ -1,10 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Check, Edit3, Trash2, X } from 'lucide-react'
+import { CalendarDays, Check, Edit3, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
+import { formatDeadline, isOverdue } from '../../utils/date'
 
 export function TodoItem({ task, onToggle, onDelete, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(task.title)
+  const deadlineLabel = formatDeadline(task.deadline)
+  const overdue = isOverdue(task.deadline, task.completed)
 
   const finishEditing = () => {
     const title = draft.trim()
@@ -69,20 +72,45 @@ export function TodoItem({ task, onToggle, onDelete, onUpdate }) {
               className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[15px] font-normal text-zinc-900 shadow-sm transition-all duration-200 focus:border-zinc-300 focus:outline-none focus:ring-1 focus:ring-zinc-300"
             />
           ) : (
-            <motion.p
-              key="title"
+            <motion.div
+              key="task-content"
               layout
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className={`truncate text-[15px] transition-colors duration-200 ${
-                task.completed
-                  ? 'text-zinc-400 line-through decoration-zinc-300'
-                  : 'text-zinc-800'
-              }`}
+              className="min-w-0"
             >
-              {task.title}
-            </motion.p>
+              <p
+                className={`truncate text-[15px] transition-colors duration-200 ${
+                  task.completed
+                    ? 'text-zinc-400 line-through decoration-zinc-300'
+                    : 'text-zinc-800'
+                }`}
+              >
+                {task.title}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium">
+                <span
+                  className={`rounded-full px-2 py-0.5 ${
+                    task.completed
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'bg-amber-50 text-amber-700'
+                  }`}
+                >
+                  {task.completed ? 'Completed' : 'Pending'}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${
+                    overdue
+                      ? 'bg-red-50 text-red-600'
+                      : 'bg-zinc-100 text-zinc-500'
+                  }`}
+                >
+                  <CalendarDays size={12} />
+                  {deadlineLabel}
+                </span>
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>

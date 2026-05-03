@@ -6,28 +6,32 @@ const initialTasks = [
     id: 1,
     title: 'Review product roadmap',
     completed: false,
+    deadline: '2026-05-07',
   },
   {
     id: 2,
     title: 'Send weekly design notes',
     completed: true,
+    deadline: '2026-05-03',
   },
   {
     id: 3,
     title: 'Prepare client handoff',
     completed: false,
+    deadline: '',
   },
 ]
 
 export function TodoProvider({ children }) {
   const [tasks, setTasks] = useState(initialTasks)
 
-  const addTask = (title) => {
+  const addTask = ({ title, deadline = '' }) => {
     setTasks((currentTasks) => [
       {
         id: crypto.randomUUID(),
         title,
         completed: false,
+        deadline,
       },
       ...currentTasks,
     ])
