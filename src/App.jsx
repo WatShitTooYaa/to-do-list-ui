@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { AppShell } from './components/AppShell'
 import { AuthProvider } from './context/AuthProvider'
+import { ThemeProvider } from './context/ThemeProvider'
 import { TodoProvider } from './context/TodoProvider'
 import { useAuth } from './context/useAuth'
 import { DashboardPage } from './pages/DashboardPage'
@@ -12,9 +13,11 @@ import { RegisterPage } from './pages/RegisterPage'
 function App() {
   return (
     <AuthProvider>
-      <TodoProvider>
-        <AppContent />
-      </TodoProvider>
+      <ThemeProvider>
+        <TodoProvider>
+          <AppContent />
+        </TodoProvider>
+      </ThemeProvider>
     </AuthProvider>
   )
 }

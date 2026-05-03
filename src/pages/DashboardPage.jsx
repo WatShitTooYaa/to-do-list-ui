@@ -13,16 +13,16 @@ export function DashboardPage() {
       <section className="mx-auto max-w-2xl">
         <header className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="mb-3 flex items-center gap-2 text-sm font-normal text-zinc-500">
+            <div className="mb-3 flex items-center gap-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
               <CalendarDays size={16} />
               <span>Today, {formatToday()}</span>
             </div>
-            <h1 className="text-3xl font-medium tracking-normal text-zinc-950 sm:text-4xl">
+            <h1 className="text-3xl font-medium tracking-normal text-zinc-950 dark:text-zinc-50 sm:text-4xl">
               Focus list
             </h1>
           </div>
 
-          <div className="w-fit rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm font-medium text-zinc-500 shadow-sm">
+          <div className="w-fit rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm font-medium text-zinc-500 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:shadow-none">
             {stats.open} open
           </div>
         </header>

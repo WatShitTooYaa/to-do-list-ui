@@ -64,7 +64,7 @@ export function LandingPage({ onNavigate }) {
         </div>
       </section>
 
-      <section className="border-b border-zinc-200 bg-white px-4 py-14">
+      <section className="border-b border-zinc-200 bg-white px-4 py-14 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="mx-auto grid max-w-6xl gap-4 md:grid-cols-3">
           {features.map((feature) => {
             const Icon = feature.icon
@@ -72,15 +72,15 @@ export function LandingPage({ onNavigate }) {
             return (
               <article
                 key={feature.title}
-                className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5"
+                className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-800 dark:bg-zinc-900"
               >
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-white text-zinc-950 shadow-sm">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-white text-zinc-950 shadow-sm dark:bg-zinc-950 dark:text-zinc-50 dark:shadow-none">
                   <Icon size={18} />
                 </div>
-                <h2 className="mt-4 text-base font-semibold text-zinc-950">
+                <h2 className="mt-4 text-base font-semibold text-zinc-950 dark:text-zinc-50">
                   {feature.title}
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-zinc-500">
+                <p className="mt-2 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
                   {feature.description}
                 </p>
               </article>
@@ -89,8 +89,8 @@ export function LandingPage({ onNavigate }) {
         </div>
       </section>
 
-      <footer className="bg-zinc-50 px-4 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col justify-between gap-3 text-sm text-zinc-500 sm:flex-row">
+      <footer className="bg-zinc-50 px-4 py-8 dark:bg-zinc-950">
+        <div className="mx-auto flex max-w-6xl flex-col justify-between gap-3 text-sm text-zinc-500 dark:text-zinc-400 sm:flex-row">
           <span>FocusList frontend</span>
           <span>React, Tailwind CSS, Framer Motion</span>
         </div>
