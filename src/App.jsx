@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AppShell } from './components/AppShell'
 import { AuthProvider } from './context/AuthProvider'
 import { ThemeProvider } from './context/ThemeProvider'
@@ -9,6 +9,23 @@ import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { RegisterPage } from './pages/RegisterPage'
+
+const pagePaths = {
+  landing: '/',
+  about: '/about',
+  login: '/login',
+  register: '/register',
+  dashboard: '/dashboard',
+  profile: '/profile',
+}
+
+const pathPages = Object.fromEntries(
+  Object.entries(pagePaths).map(([page, path]) => [path, page]),
+)
+
+const getPageFromPath = (path) => pathPages[path] ?? 'landing'
+
+const getPathFromPage = (page) => pagePaths[page] ?? pagePaths.landing
 
 function App() {
   return (
@@ -23,37 +40,61 @@ function App() {
 }
 
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState('landing')
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname)
   const { user } = useAuth()
+  const currentPage = getPageFromPath(currentPath)
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   const handleNavigate = useCallback(
     (page) => {
-      if (!user && ['dashboard', 'profile'].includes(page)) {
-        setCurrentPage('login')
-        return
+      const nextPage = !user && ['dashboard', 'profile'].includes(page)
+        ? 'login'
+        : page
+      const nextPath = getPathFromPage(nextPage)
+
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState({}, '', nextPath)
       }
 
-      setCurrentPage(page)
+      setCurrentPath(nextPath)
     },
     [user],
   )
 
+  const handleAuthNavigate = useCallback((page) => {
+    const nextPath = getPathFromPage(page)
+
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, '', nextPath)
+    }
+
+    setCurrentPath(nextPath)
+  }, [])
+
   const page = useMemo(() => {
     switch (currentPage) {
       case 'login':
-        return <LoginPage onNavigate={setCurrentPage} />
+        return <LoginPage onNavigate={handleAuthNavigate} />
       case 'register':
-        return <RegisterPage onNavigate={setCurrentPage} />
+        return <RegisterPage onNavigate={handleAuthNavigate} />
       case 'dashboard':
-        return user ? <DashboardPage /> : <LoginPage onNavigate={setCurrentPage} />
+        return user ? <DashboardPage /> : <LoginPage onNavigate={handleAuthNavigate} />
       case 'profile':
-        return user ? <ProfilePage /> : <LoginPage onNavigate={setCurrentPage} />
+        return user ? <ProfilePage /> : <LoginPage onNavigate={handleAuthNavigate} />
       case 'about':
         return <LandingPage onNavigate={handleNavigate} />
       default:
         return <LandingPage onNavigate={handleNavigate} />
     }
-  }, [currentPage, handleNavigate, user])
+  }, [currentPage, handleAuthNavigate, handleNavigate, user])
 
   return (
     <AppShell currentPage={currentPage} onNavigate={handleNavigate}>
