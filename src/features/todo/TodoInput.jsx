@@ -11,8 +11,9 @@ export function TodoInput({ onAdd }) {
   const [value, setValue] = useState('')
   const [deadline, setDeadline] = useState('')
   const [priority, setPriority] = useState('medium')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
     const title = value.trim()
 
@@ -20,10 +21,16 @@ export function TodoInput({ onAdd }) {
       return
     }
 
-    onAdd({ title, deadline, priority })
-    setValue('')
-    setDeadline('')
-    setPriority('medium')
+    setIsSubmitting(true)
+
+    try {
+      await onAdd({ title, deadline, priority })
+      setValue('')
+      setDeadline('')
+      setPriority('medium')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -62,7 +69,8 @@ export function TodoInput({ onAdd }) {
       <button
         type="submit"
         aria-label="Add task"
-        className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-zinc-950 text-white shadow-sm shadow-zinc-300 transition-all duration-200 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-300 focus:ring-offset-2 dark:bg-zinc-50 dark:text-zinc-950 dark:shadow-none dark:hover:bg-zinc-200 dark:focus:ring-zinc-700 dark:focus:ring-offset-zinc-950"
+        disabled={isSubmitting}
+        className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-zinc-950 text-white shadow-sm shadow-zinc-300 transition-all duration-200 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-300 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-950 dark:shadow-none dark:hover:bg-zinc-200 dark:focus:ring-zinc-700 dark:focus:ring-offset-zinc-950"
       >
         <Check size={18} />
       </button>

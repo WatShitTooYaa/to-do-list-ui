@@ -1,72 +1,103 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TodoContext } from './todoContextValue'
-
-const initialTasks = [
-  {
-    id: 1,
-    title: 'Review product roadmap',
-    completed: false,
-    deadline: '2026-05-07',
-    priority: 'high',
-  },
-  {
-    id: 2,
-    title: 'Send weekly design notes',
-    completed: true,
-    deadline: '2026-05-03',
-    priority: 'medium',
-  },
-  {
-    id: 3,
-    title: 'Prepare client handoff',
-    completed: false,
-    deadline: '',
-    priority: 'low',
-  },
-]
+import { useAuth } from './useAuth'
+import {
+  createTask,
+  deleteTask as deleteTaskService,
+  getTasks,
+  updateTask as updateTaskService,
+} from '../services/taskService'
 
 export function TodoProvider({ children }) {
-  const [tasks, setTasks] = useState(initialTasks)
+  const { user, isAuthReady } = useAuth()
+  const [tasks, setTasks] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const addTask = ({ title, deadline = '', priority = 'medium' }) => {
-    setTasks((currentTasks) => [
-      {
-        id: crypto.randomUUID(),
-        title,
-        completed: false,
-        deadline,
-        priority,
-      },
-      ...currentTasks,
-    ])
-  }
+  const loadTasks = useCallback(async () => {
+    if (!user) {
+      setTasks([])
+      return
+    }
 
-  const toggleTask = (taskId) => {
-    setTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task,
-      ),
-    )
-  }
+    setIsLoading(true)
+    setError('')
 
-  const deleteTask = (taskId) => {
-    setTasks((currentTasks) =>
-      currentTasks.filter((task) => task.id !== taskId),
-    )
-  }
+    try {
+      setTasks(await getTasks())
+    } catch (currentError) {
+      setError(currentError.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [user])
 
-  const updateTask = (taskId, updates) => {
-    setTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              ...(typeof updates === 'string' ? { title: updates } : updates),
-            }
-          : task,
-      ),
-    )
-  }
+  useEffect(() => {
+    if (isAuthReady) {
+      Promise.resolve().then(loadTasks)
+    }
+  }, [isAuthReady, loadTasks])
+
+  const addTask = useCallback(async ({ title, deadline = '', priority = 'medium' }) => {
+    setError('')
+
+    try {
+      const createdTask = await createTask({ title, deadline, priority })
+
+      if (createdTask) {
+        setTasks((currentTasks) => [createdTask, ...currentTasks])
+      } else {
+        await loadTasks()
+      }
+    } catch (currentError) {
+      setError(currentError.message)
+      throw currentError
+    }
+  }, [loadTasks])
+
+  const deleteTask = useCallback(async (taskId) => {
+    setError('')
+
+    try {
+      await deleteTaskService(taskId)
+      setTasks((currentTasks) =>
+        currentTasks.filter((task) => task.id !== taskId),
+      )
+    } catch (currentError) {
+      setError(currentError.message)
+    }
+  }, [])
+
+  const updateTask = useCallback(async (taskId, updates) => {
+    setError('')
+    const nextUpdates = typeof updates === 'string' ? { title: updates } : updates
+
+    try {
+      const updatedTask = await updateTaskService(taskId, nextUpdates)
+      setTasks((currentTasks) =>
+        currentTasks.map((task) =>
+          task.id === taskId
+            ? { ...task, ...nextUpdates, ...(updatedTask ?? {}) }
+            : task,
+        ),
+      )
+    } catch (currentError) {
+      setError(currentError.message)
+    }
+  }, [])
+
+  const toggleTask = useCallback(
+    async (taskId) => {
+      const task = tasks.find((currentTask) => currentTask.id === taskId)
+
+      if (!task) {
+        return
+      }
+
+      await updateTask(taskId, { completed: !task.completed })
+    },
+    [tasks, updateTask],
+  )
 
   const stats = useMemo(() => {
     const completed = tasks.filter((task) => task.completed).length
@@ -80,8 +111,28 @@ export function TodoProvider({ children }) {
   }, [tasks])
 
   const value = useMemo(
-    () => ({ tasks, stats, addTask, toggleTask, deleteTask, updateTask }),
-    [tasks, stats],
+    () => ({
+      tasks,
+      stats,
+      isLoading,
+      error,
+      loadTasks,
+      addTask,
+      toggleTask,
+      deleteTask,
+      updateTask,
+    }),
+    [
+      addTask,
+      deleteTask,
+      error,
+      isLoading,
+      loadTasks,
+      tasks,
+      stats,
+      toggleTask,
+      updateTask,
+    ],
   )
 
   return <TodoContext.Provider value={value}>{children}</TodoContext.Provider>

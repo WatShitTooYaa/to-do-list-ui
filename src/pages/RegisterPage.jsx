@@ -6,7 +6,7 @@ export function RegisterPage({ onNavigate }) {
 
   const handleSubmit = async (values) => {
     await register(values)
-    onNavigate('dashboard')
+    onNavigate('login')
   }
 
   return (

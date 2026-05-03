@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   ListChecks,
   LogIn,
+  LogOut,
   Moon,
   Sun,
   UserPlus,
@@ -19,7 +20,7 @@ const guestNavItems = [
 const userNavItems = [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }]
 
 export function AppShell({ currentPage, onNavigate, children }) {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const { isDark, toggleTheme } = useTheme()
   const navItems = user ? userNavItems : guestNavItems
 
@@ -72,14 +73,27 @@ export function AppShell({ currentPage, onNavigate, children }) {
               {isDark ? <Sun size={15} /> : <Moon size={15} />}
             </button>
             {user ? (
-            <button
-              type="button"
-              onClick={() => onNavigate('profile')}
-              className="flex h-9 min-w-0 max-w-40 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              <UserRound size={15} className="shrink-0" />
-              <span className="truncate">{user.name}</span>
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => onNavigate('profile')}
+                className="flex h-9 min-w-0 max-w-40 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                <UserRound size={15} className="shrink-0" />
+                <span className="truncate">{user.name}</span>
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await logout()
+                  onNavigate('landing')
+                }}
+                aria-label="Sign out"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                <LogOut size={15} />
+              </button>
+            </>
           ) : (
             <>
               <button
