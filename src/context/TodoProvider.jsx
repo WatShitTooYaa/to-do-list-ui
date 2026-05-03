@@ -7,31 +7,35 @@ const initialTasks = [
     title: 'Review product roadmap',
     completed: false,
     deadline: '2026-05-07',
+    priority: 'high',
   },
   {
     id: 2,
     title: 'Send weekly design notes',
     completed: true,
     deadline: '2026-05-03',
+    priority: 'medium',
   },
   {
     id: 3,
     title: 'Prepare client handoff',
     completed: false,
     deadline: '',
+    priority: 'low',
   },
 ]
 
 export function TodoProvider({ children }) {
   const [tasks, setTasks] = useState(initialTasks)
 
-  const addTask = ({ title, deadline = '' }) => {
+  const addTask = ({ title, deadline = '', priority = 'medium' }) => {
     setTasks((currentTasks) => [
       {
         id: crypto.randomUUID(),
         title,
         completed: false,
         deadline,
+        priority,
       },
       ...currentTasks,
     ])
@@ -51,10 +55,15 @@ export function TodoProvider({ children }) {
     )
   }
 
-  const updateTask = (taskId, title) => {
+  const updateTask = (taskId, updates) => {
     setTasks((currentTasks) =>
       currentTasks.map((task) =>
-        task.id === taskId ? { ...task, title } : task,
+        task.id === taskId
+          ? {
+              ...task,
+              ...(typeof updates === 'string' ? { title: updates } : updates),
+            }
+          : task,
       ),
     )
   }

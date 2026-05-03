@@ -15,13 +15,13 @@ export function TodoStats({ stats }) {
         return (
           <div
             key={item.key}
-            className="rounded-2xl border border-zinc-200 bg-white px-4 py-4 shadow-sm"
+            className="rounded-2xl border border-zinc-200 bg-white px-4 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none"
           >
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-medium text-zinc-500">{item.label}</span>
-              <Icon size={17} className="text-zinc-400" />
+              <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{item.label}</span>
+              <Icon size={17} className="text-zinc-400 dark:text-zinc-500" />
             </div>
-            <p className="mt-3 text-2xl font-semibold text-zinc-950">
+            <p className="mt-3 text-2xl font-semibold text-zinc-950 dark:text-zinc-50">
               {stats[item.key]}
             </p>
           </div>
