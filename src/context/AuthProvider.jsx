@@ -2,12 +2,11 @@ import { useMemo, useState } from 'react'
 import { AuthContext } from './authContextValue'
 import {
   login as loginService,
-  mockUser,
   register as registerService,
 } from '../services/authService'
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(mockUser)
+  const [user, setUser] = useState(null)
 
   const login = async (credentials) => {
     const nextUser = await loginService(credentials)
@@ -25,8 +24,12 @@ export function AuthProvider({ children }) {
     setUser((currentUser) => ({ ...currentUser, ...profile }))
   }
 
+  const logout = () => {
+    setUser(null)
+  }
+
   const value = useMemo(
-    () => ({ user, login, register, updateProfile }),
+    () => ({ user, login, register, updateProfile, logout }),
     [user],
   )
 

@@ -3,16 +3,22 @@ import {
   LayoutDashboard,
   ListChecks,
   LogIn,
+  UserPlus,
   UserRound,
 } from 'lucide-react'
+import { useAuth } from '../context/useAuth'
 
-const navItems = [
+const guestNavItems = [
   { id: 'landing', label: 'Home', icon: CheckCircle2 },
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'profile', label: 'Profile', icon: UserRound },
+  { id: 'about', label: 'About', icon: ListChecks },
 ]
 
+const userNavItems = [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }]
+
 export function AppShell({ currentPage, onNavigate, children }) {
+  const { user } = useAuth()
+  const navItems = user ? userNavItems : guestNavItems
+
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-950">
       <header className="sticky top-0 z-20 border-b border-zinc-200/80 bg-zinc-50/90 backdrop-blur">
@@ -51,17 +57,42 @@ export function AppShell({ currentPage, onNavigate, children }) {
             })}
           </nav>
 
-          <button
-            type="button"
-            onClick={() => onNavigate('login')}
-            className="flex h-9 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-100"
-          >
-            <LogIn size={15} />
-            Sign in
-          </button>
+          {user ? (
+            <button
+              type="button"
+              onClick={() => onNavigate('profile')}
+              className="flex h-9 min-w-0 max-w-40 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-100"
+            >
+              <UserRound size={15} className="shrink-0" />
+              <span className="truncate">{user.name}</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onNavigate('login')}
+                className="hidden h-9 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-100 sm:flex"
+              >
+                <LogIn size={15} />
+                Sign in
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate('register')}
+                className="flex h-9 items-center gap-2 rounded-full bg-zinc-950 px-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800"
+              >
+                <UserPlus size={15} />
+                Sign up
+              </button>
+            </div>
+          )}
         </div>
 
-        <nav className="mx-auto grid max-w-6xl grid-cols-3 border-t border-zinc-200 bg-white sm:hidden">
+        <nav
+          className={`mx-auto grid max-w-6xl border-t border-zinc-200 bg-white sm:hidden ${
+            user ? 'grid-cols-2' : 'grid-cols-4'
+          }`}
+        >
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = currentPage === item.id
@@ -80,6 +111,42 @@ export function AppShell({ currentPage, onNavigate, children }) {
               </button>
             )
           })}
+          {!user && (
+            <>
+              <button
+                type="button"
+                onClick={() => onNavigate('login')}
+                className={`flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium ${
+                  currentPage === 'login' ? 'text-zinc-950' : 'text-zinc-500'
+                }`}
+              >
+                <LogIn size={15} />
+                Sign in
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate('register')}
+                className={`flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium ${
+                  currentPage === 'register' ? 'text-zinc-950' : 'text-zinc-500'
+                }`}
+              >
+                <UserPlus size={15} />
+                Sign up
+              </button>
+            </>
+          )}
+          {user && (
+            <button
+              type="button"
+              onClick={() => onNavigate('profile')}
+              className={`flex min-w-0 items-center justify-center gap-2 px-3 py-3 text-sm font-medium ${
+                currentPage === 'profile' ? 'text-zinc-950' : 'text-zinc-500'
+              }`}
+            >
+              <UserRound size={15} className="shrink-0" />
+              <span className="truncate">{user.name}</span>
+            </button>
+          )}
         </nav>
       </header>
 
