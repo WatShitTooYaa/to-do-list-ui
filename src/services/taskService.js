@@ -3,6 +3,18 @@ import { request } from './api'
 const normalizePriority = (priority) =>
     ['low', 'medium', 'high'].includes(priority) ? priority : 'medium'
 
+const pickTaskTitle = (task) =>
+    task?.title ?? task?.name ?? task?.taskName ?? task?.text ?? task?.description ?? ''
+
+const pickTaskCompleted = (task) =>
+    Boolean(
+        task?.completed ??
+            task?.isCompleted ??
+            task?.is_completed ??
+            task?.done ??
+            task?.status === 'done',
+    )
+
 const toDateInputValue = (deadline) => {
     if (!deadline) {
         return ''
@@ -57,11 +69,11 @@ export const normalizeTask = (task) => {
     }
 
     return {
-        id: task.id ?? task._id,
-        title: task.title ?? '',
-        completed: Boolean(task.completed ?? task.isCompleted),
+        id: task.id ?? task._id ?? task.taskId ?? task.uuid ?? null,
+        title: pickTaskTitle(task),
+        completed: pickTaskCompleted(task),
         deadline: toDateInputValue(task.deadline),
-        priority: normalizePriority(task.priority),
+        priority: normalizePriority(task.priority ?? task.taskPriority ?? task.level),
     }
 }
 
@@ -78,6 +90,7 @@ export const createTask = async ({ title, deadline = '', priority = 'medium' }) 
         credentials: 'include',
         body: {
             title,
+            name: title,
             isCompleted: false,
             deadline: toApiDeadline(deadline),
             priority,
@@ -92,10 +105,12 @@ export const updateTask = async (taskId, updates) => {
 
     if (updates.title !== undefined) {
         body.title = updates.title
+        body.name = updates.title
     }
 
     if (updates.completed !== undefined) {
         body.isCompleted = updates.completed
+        body.completed = updates.completed
     }
 
     if (updates.deadline !== undefined) {

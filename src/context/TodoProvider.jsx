@@ -42,13 +42,8 @@ export function TodoProvider({ children }) {
     setError('')
 
     try {
-      const createdTask = await createTask({ title, deadline, priority })
-
-      if (createdTask) {
-        setTasks((currentTasks) => [createdTask, ...currentTasks])
-      } else {
-        await loadTasks()
-      }
+      await createTask({ title, deadline, priority })
+      await loadTasks()
     } catch (currentError) {
       setError(currentError.message)
       throw currentError
@@ -60,31 +55,23 @@ export function TodoProvider({ children }) {
 
     try {
       await deleteTaskService(taskId)
-      setTasks((currentTasks) =>
-        currentTasks.filter((task) => task.id !== taskId),
-      )
+      await loadTasks()
     } catch (currentError) {
       setError(currentError.message)
     }
-  }, [])
+  }, [loadTasks])
 
   const updateTask = useCallback(async (taskId, updates) => {
     setError('')
     const nextUpdates = typeof updates === 'string' ? { title: updates } : updates
 
     try {
-      const updatedTask = await updateTaskService(taskId, nextUpdates)
-      setTasks((currentTasks) =>
-        currentTasks.map((task) =>
-          task.id === taskId
-            ? { ...task, ...nextUpdates, ...(updatedTask ?? {}) }
-            : task,
-        ),
-      )
+      await updateTaskService(taskId, nextUpdates)
+      await loadTasks()
     } catch (currentError) {
       setError(currentError.message)
     }
-  }, [])
+  }, [loadTasks])
 
   const toggleTask = useCallback(
     async (taskId) => {
