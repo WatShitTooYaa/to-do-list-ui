@@ -12,12 +12,16 @@ const extractUser = (data, fallback = {}) => {
     }
   }
 
-  return {
-    name: fallback.name ?? fallback.email,
-    username: fallback.name,
-    email: fallback.email,
-    role: 'Member',
+  if (fallback.email || fallback.name) {
+    return {
+      name: fallback.name ?? fallback.email,
+      username: fallback.name,
+      email: fallback.email,
+      role: 'Member',
+    }
   }
+
+  return null
 }
 
 export const login = async ({ email, password }) => {
@@ -48,16 +52,20 @@ export const register = async ({ name, email, password }) => {
 }
 
 export const refreshSession = async () => {
-  const data = await request('/api/auth/refresh', {
-    method: 'POST',
-    auth: false,
-    retry: false,
-  })
-  const token = extractAccessToken(data)
+  try {
+    const data = await request('/api/auth/refresh', {
+      method: 'POST',
+      auth: false,
+      retry: false,
+    })
+    const token = extractAccessToken(data)
 
-  setAccessToken(token)
+    setAccessToken(token)
 
-  return token ? extractUser(data) : null
+    return extractUser(data)
+  } catch {
+    return null
+  }
 }
 
 export const logout = async () => {

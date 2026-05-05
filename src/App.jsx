@@ -1,3 +1,4 @@
+import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AppShell } from './components/AppShell'
 import { AuthProvider } from './context/AuthProvider'
@@ -41,7 +42,7 @@ function App() {
 
 function AppContent() {
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname)
-  const { user } = useAuth()
+  const { user, isAuthReady } = useAuth()
   const currentPage = getPageFromPath(currentPath)
 
   useEffect(() => {
@@ -79,6 +80,19 @@ function AppContent() {
     setCurrentPath(nextPath)
   }, [])
 
+  useEffect(() => {
+    if (!isAuthReady) return
+
+    const isProtectedRoute = ['dashboard', 'profile'].includes(currentPage)
+    const isAuthRoute = ['login', 'register'].includes(currentPage)
+
+    if (isProtectedRoute && !user) {
+      handleAuthNavigate('login')
+    } else if (isAuthRoute && user) {
+      handleAuthNavigate('dashboard')
+    }
+  }, [isAuthReady, user, currentPage, handleAuthNavigate])
+
   const page = useMemo(() => {
     switch (currentPage) {
       case 'login':
@@ -95,6 +109,14 @@ function AppContent() {
         return <LandingPage onNavigate={handleNavigate} />
     }
   }, [currentPage, handleAuthNavigate, handleNavigate, user])
+
+  if (!isAuthReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-zinc-950">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+      </div>
+    )
+  }
 
   return (
     <AppShell currentPage={currentPage} onNavigate={handleNavigate}>
