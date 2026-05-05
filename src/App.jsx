@@ -87,9 +87,9 @@ function AppContent() {
     const isAuthRoute = ['login', 'register'].includes(currentPage)
 
     if (isProtectedRoute && !user) {
-      handleAuthNavigate('login')
+      Promise.resolve().then(() => handleAuthNavigate('login'))
     } else if (isAuthRoute && user) {
-      handleAuthNavigate('dashboard')
+      Promise.resolve().then(() => handleAuthNavigate('dashboard'))
     }
   }, [isAuthReady, user, currentPage, handleAuthNavigate])
 
