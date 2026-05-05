@@ -1,4 +1,4 @@
-import { CalendarDays, Check, CirclePlus } from 'lucide-react'
+import { CalendarDays, Check, CirclePlus, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 
 const priorityOptions = [
@@ -24,6 +24,7 @@ export function TodoInput({ onAdd }) {
     setIsSubmitting(true)
 
     try {
+      await new Promise((resolve) => setTimeout(resolve, 350))
       await onAdd({ title, deadline, priority })
       setValue('')
       setDeadline('')
@@ -72,7 +73,11 @@ export function TodoInput({ onAdd }) {
         disabled={isSubmitting}
         className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-zinc-950 text-white shadow-sm shadow-zinc-300 transition-all duration-200 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-300 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-950 dark:shadow-none dark:hover:bg-zinc-200 dark:focus:ring-zinc-700 dark:focus:ring-offset-zinc-950"
       >
-        <Check size={18} />
+        {isSubmitting ? (
+          <Loader2 size={18} className="animate-spin" />
+        ) : (
+          <Check size={18} />
+        )}
       </button>
     </form>
   )

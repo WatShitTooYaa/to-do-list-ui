@@ -14,13 +14,13 @@ export function TodoProvider({ children }) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const loadTasks = useCallback(async () => {
+  const loadTasks = useCallback(async (showLoadingUI = true) => {
     if (!user) {
       setTasks([])
       return
     }
 
-    setIsLoading(true)
+    if (showLoadingUI) setIsLoading(true)
     setError('')
 
     try {
@@ -28,7 +28,7 @@ export function TodoProvider({ children }) {
     } catch (currentError) {
       setError(currentError.message)
     } finally {
-      setIsLoading(false)
+      if (showLoadingUI) setIsLoading(false)
     }
   }, [user])
 
@@ -42,8 +42,26 @@ export function TodoProvider({ children }) {
     setError('')
 
     try {
-      await createTask({ title, deadline, priority })
-      await loadTasks()
+      const createdTask = await createTask({ title, deadline, priority })
+      
+      if (createdTask) {
+        // Merge with user input in case backend returns partial data
+        const optimisticTask = {
+          ...createdTask,
+          title: createdTask.title || title,
+          deadline: createdTask.deadline || deadline,
+          priority: createdTask.priority || priority,
+          completed: false,
+        }
+        
+        // If backend returned an ID, optimistically show it. Otherwise wait for loadTasks.
+        if (optimisticTask.id) {
+           setTasks((currentTasks) => [optimisticTask, ...currentTasks])
+        }
+      }
+      
+      // Silently sync with backend to ensure we have the authoritative list and valid IDs
+      await loadTasks(false)
     } catch (currentError) {
       setError(currentError.message)
       throw currentError
@@ -55,7 +73,11 @@ export function TodoProvider({ children }) {
 
     try {
       await deleteTaskService(taskId)
-      await loadTasks()
+      setTasks((currentTasks) =>
+        currentTasks.filter((task) => task.id !== taskId),
+      )
+      // Silently sync
+      await loadTasks(false)
     } catch (currentError) {
       setError(currentError.message)
     }
@@ -66,8 +88,16 @@ export function TodoProvider({ children }) {
     const nextUpdates = typeof updates === 'string' ? { title: updates } : updates
 
     try {
-      await updateTaskService(taskId, nextUpdates)
-      await loadTasks()
+      const updatedTask = await updateTaskService(taskId, nextUpdates)
+      setTasks((currentTasks) =>
+        currentTasks.map((task) =>
+          task.id === taskId
+            ? { ...task, ...nextUpdates, ...(updatedTask ?? {}) }
+            : task,
+        ),
+      )
+      // Silently sync
+      await loadTasks(false)
     } catch (currentError) {
       setError(currentError.message)
     }

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { CalendarDays, Check, Edit3, Trash2, X } from 'lucide-react'
+import { CalendarDays, Check, Edit3, Trash2, X, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { formatDeadline, isOverdue } from '../../utils/date'
 
@@ -22,6 +22,8 @@ export function TodoItem({ task, onToggle, onDelete, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(task.title)
   const [draftPriority, setDraftPriority] = useState(getPriority(task.priority))
+  const [isProcessingToggle, setIsProcessingToggle] = useState(false)
+  const [isProcessingDelete, setIsProcessingDelete] = useState(false)
   const deadlineLabel = formatDeadline(task.deadline)
   const overdue = isOverdue(task.deadline, task.completed)
   const priority = getPriority(task.priority)
@@ -45,6 +47,26 @@ export function TodoItem({ task, onToggle, onDelete, onUpdate }) {
     setIsEditing(false)
   }
 
+  const handleToggle = async () => {
+    setIsProcessingToggle(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 350))
+      await onToggle(task.id)
+    } finally {
+      setIsProcessingToggle(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    setIsProcessingDelete(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 350))
+      await onDelete(task.id)
+    } finally {
+      setIsProcessingDelete(false)
+    }
+  }
+
   return (
     <motion.li
       layout
@@ -56,15 +78,20 @@ export function TodoItem({ task, onToggle, onDelete, onUpdate }) {
     >
       <button
         type="button"
-        onClick={() => onToggle(task.id)}
+        onClick={handleToggle}
+        disabled={isProcessingToggle || isProcessingDelete}
         aria-label={task.completed ? 'Mark incomplete' : 'Mark complete'}
         className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border transition-all duration-200 ${
           task.completed
             ? 'border-emerald-500 bg-emerald-500 text-white'
             : 'border-zinc-300 bg-white text-transparent hover:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-500'
-        }`}
+        } disabled:opacity-50 disabled:cursor-not-allowed`}
       >
-        <Check size={14} strokeWidth={2.5} />
+        {isProcessingToggle ? (
+          <Loader2 size={14} className="animate-spin text-zinc-400 dark:text-zinc-500" strokeWidth={2.5} />
+        ) : (
+          <Check size={14} strokeWidth={2.5} />
+        )}
       </button>
 
       <div className="min-w-0 flex-1">
@@ -169,11 +196,12 @@ export function TodoItem({ task, onToggle, onDelete, onUpdate }) {
           </button>
           <button
             type="button"
-            onClick={() => onDelete(task.id)}
+            onClick={handleDelete}
+            disabled={isProcessingToggle || isProcessingDelete}
             aria-label="Delete task"
-            className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 transition-colors duration-200 hover:bg-red-50 hover:text-red-500 focus:outline-none focus:ring-1 focus:ring-red-200 dark:hover:bg-red-500/15 dark:hover:text-red-300 dark:focus:ring-red-900"
+            className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 transition-colors duration-200 hover:bg-red-50 hover:text-red-500 focus:outline-none focus:ring-1 focus:ring-red-200 dark:hover:bg-red-500/15 dark:hover:text-red-300 dark:focus:ring-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Trash2 size={15} />
+            {isProcessingDelete ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
           </button>
         </div>
       )}

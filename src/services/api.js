@@ -113,7 +113,7 @@ export const refreshAccessToken = async () => {
       .then((data) => {
         const nextToken = extractAccessToken(data)
         setAccessToken(nextToken)
-        return Boolean(nextToken)
+        return true
       })
       .catch(() => {
         setAccessToken(null)
