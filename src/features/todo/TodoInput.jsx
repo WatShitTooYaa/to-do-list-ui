@@ -12,6 +12,7 @@ export function TodoInput({ onAdd }) {
     const [deadline, setDeadline] = useState('')
     const [priority, setPriority] = useState('medium')
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const today = new Date().toISOString().split('T')[0]
 
     const handleSubmit = async (event) => {
         event.preventDefault()
@@ -50,6 +51,7 @@ export function TodoInput({ onAdd }) {
                 <input
                     type="date"
                     value={deadline}
+                    min={today}
                     onChange={(event) => setDeadline(event.target.value)}
                     aria-label="Task deadline"
                     className="h-full w-full bg-transparent text-[14px] font-normal text-zinc-700 focus:outline-none dark:text-zinc-200"

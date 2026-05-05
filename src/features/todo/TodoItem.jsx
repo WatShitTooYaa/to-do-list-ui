@@ -165,6 +165,11 @@ export function TodoItem({ task, onToggle, onDelete, onUpdate }) {
                 >
                   {task.completed ? 'Completed' : 'Pending'}
                 </span>
+                {overdue && (
+                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white dark:bg-red-500/20 dark:text-red-300">
+                    Overdue
+                  </span>
+                )}
                 <span
                   className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${
                     overdue
