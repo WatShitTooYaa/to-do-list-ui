@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ListChecks } from 'lucide-react'
 import { TodoItem } from './TodoItem'
 
-export function TodoList({ tasks, onToggle, onDelete, onUpdate }) {
+export function TodoList({ tasks, onToggle, onDelete, onUpdate, emptyTitle, emptyDescription }) {
     return (
         <section className="rounded-2xl border border-zinc-200 bg-white/90 p-3 shadow-md shadow-zinc-200/70 transition-colors dark:border-zinc-800 dark:bg-zinc-900/90 dark:shadow-none sm:p-4">
             <AnimatePresence mode="popLayout">
@@ -19,14 +19,14 @@ export function TodoList({ tasks, onToggle, onDelete, onUpdate }) {
                         ))}
                     </motion.ul>
                 ) : (
-                    <EmptyState key="empty" />
+                    <EmptyState key="empty" title={emptyTitle} description={emptyDescription} />
                 )}
             </AnimatePresence>
         </section>
     )
 }
 
-function EmptyState() {
+function EmptyState({ title = 'All clear. Enjoy your day!', description = 'Nothing needs your attention.' }) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -38,9 +38,9 @@ function EmptyState() {
                 <ListChecks size={22} />
             </div>
             <p className="mt-5 text-[15px] font-medium text-zinc-800 dark:text-zinc-100">
-                All clear. Enjoy your day!
+                {title}
             </p>
-            <p className="mt-1 text-sm text-zinc-400 dark:text-zinc-500">Nothing needs your attention.</p>
+            <p className="mt-1 text-sm text-zinc-400 dark:text-zinc-500">{description}</p>
         </motion.div>
     )
 }
