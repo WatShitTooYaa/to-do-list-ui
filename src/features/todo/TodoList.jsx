@@ -8,9 +8,9 @@ export function TodoList({ tasks, onToggle, onDelete, onUpdate }) {
             <AnimatePresence mode="popLayout">
                 {tasks.length > 0 ? (
                     <motion.ul layout className="space-y-1">
-                        {tasks.map((task) => (
+                        {tasks.map((task, index) => (
                             <TodoItem
-                                key={task.id}
+                                key={task.id ?? task._id ?? `${task.title}-${task.deadline}-${task.priority}-${index}`}
                                 task={task}
                                 onToggle={onToggle}
                                 onDelete={onDelete}

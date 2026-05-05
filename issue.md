@@ -1,39 +1,20 @@
-Role & Objective
-Bertindaklah sebagai Expert UI/UX Frontend Developer. Tugas Anda adalah membuat halaman utama (Dashboard) untuk aplikasi To-Do List menggunakan React, Tailwind CSS, dan Framer Motion (untuk animasi). Desain harus terasa sleek, premium, minimalis, dan setara dengan produk kelas dunia seperti Linear, Notion, atau Apple Reminders.
+# Known Bugs / Issues Tracker
 
-Design System & Tech Stack Requirements
+Berikut adalah daftar bug yang saat ini teridentifikasi di dalam repositori:
 
-Framework: React (Functional Components).
+### 1. Unique Key Prop Error pada TodoList
+*   **Deskripsi**: Ketika sebuah task muncul lalu menekan tombol centang, muncul error di console: 
+    > `TodoList.jsx:12 Each child in a list should have a unique "key" prop. Check the render method of ForwardRef(motion.ul). It was passed a child from TodoList`
+*   **Status**: Open
+*   **Lokasi**: `src/features/todo/TodoList.jsx` (sekitar baris 12)
+*   **Kemungkinan Penyebab**: Saat melakukan *mapping* atau merender daftar `TodoItem` menggunakan Framer Motion (`<motion.ul>`), elemen anak tidak memiliki properti `key` yang unik atau nilainya `undefined`.
 
-Styling: Tailwind CSS. Gunakan palet warna netral yang elegan (disarankan zinc atau slate untuk background dan teks, dengan satu warna aksen subtle seperti indigo-500 atau emerald-500).
+### 2. Isi Task Tidak Muncul (Tampil seperti Dummy)
+*   **Deskripsi**: Saat menambahkan *task* baru, item list yang muncul di antarmuka terlihat kosong (seperti elemen *dummy*) dan tidak memiliki teks/isi yang sesuai dengan yang di-input.
+*   **Status**: Open
+*   **Kemungkinan Penyebab**: Struktur objek/data yang dikembalikan oleh API (`taskService.js` atau backend) setelah menambah task baru tidak cocok dengan struktur yang diharapkan oleh frontend, sehingga properti seperti judul (misal: `title` vs `name`) tidak terbaca dan menjadi kosong.
 
-Typography: Gunakan font sans-serif modern (seperti Inter, Geist, atau SF Pro). Teks harus tajam dengan hierarki weight yang jelas (misal: font-medium untuk judul, font-normal untuk teks biasa, text-zinc-500 untuk placeholder).
-
-Icons: Gunakan Lucide React untuk ikon yang konsisten dan minimalis.
-
-Animations: Gunakan Framer Motion (motion dan AnimatePresence) untuk transisi masuk/keluarnya task.
-
-Layout & Architecture Guidelines
-
-Container: Jangan gunakan full-width untuk list. Gunakan container di tengah layar (misal: max-w-2xl mx-auto mt-20 px-4) agar mata fokus pada konten.
-
-Background: Gunakan warna latar yang sangat lembut (misal bg-zinc-50 untuk light mode atau bg-zinc-950 untuk dark mode).
-
-Header: Buat header minimalis yang menampilkan sapaan singkat atau tanggal hari ini ("Today, 1 May") dengan tipografi yang elegan.
-
-Input Area (Add Task): >     * Jangan gunakan border kotak yang tebal. Gunakan input field transparan dengan bayangan sangat lembut (shadow-sm), atau border 1px yang hanya menebal/berubah warna saat di-focus (focus:ring-1 focus:ring-zinc-300 focus:outline-none).
-
-Tambahkan animasi transisi warna border yang mulus (transition-all duration-200).
-
-Task List (The Items):
-
-Setiap task item harus memiliki padding yang nyaman (misal py-3 px-2).
-
-Gunakan teknik Group Hover di Tailwind (group). Ikon "Edit" dan "Delete" harus tersembunyi secara default, dan hanya muncul dengan animasi fade-in transparan saat mouse diarahkan ke task item tersebut. Ini kunci dari desain minimalis.
-
-Checkbox: Buat desain checkbox custom (bulat atau kotak rounded) yang mulus saat diklik, coret teks (strikethrough) dengan animasi saat tugas selesai, dan ubah warna teks menjadi text-zinc-400.
-
-Empty State: Jika tidak ada tugas, tampilkan ilustrasi atau teks yang sangat bersih dan menenangkan (misal: "All clear. Enjoy your day!").
-
-Deliverable
-Berikan saya kode React yang bersih, dipisah per komponen jika perlu (misal TaskItem, TaskInput), dan cantumkan class Tailwind secara eksplisit tanpa memerlukan konfigurasi custom di tailwind.config.js selain font.
+### 3. Fungsi CRUD Tidak Real-time
+*   **Deskripsi**: Segala aksi modifikasi data (Create, Update, Delete) tidak langsung memperbarui tampilan secara *real-time*. Perubahan baru terlihat jika halaman dimuat ulang (*refresh*).
+*   **Status**: Open
+*   **Kemungkinan Penyebab**: *State management* (di dalam `TodoProvider`) gagal melakukan pembaruan state lokal (*optimistic update*) segera sesudah respons sukses dari API, atau fungsi *fetching* data tidak dipanggil ulang dengan benar setelah tindakan mutasi selesai.
