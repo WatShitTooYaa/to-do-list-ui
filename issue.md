@@ -1,20 +1,16 @@
-# Known Bugs / Issues Tracker
+# Known Bugs & Features Tracker
 
-Berikut adalah daftar bug yang saat ini teridentifikasi di dalam repositori:
+Berikut adalah daftar bug dan fitur yang perlu ditambahkan:
 
-### 1. Unique Key Prop Error pada TodoList
-*   **Deskripsi**: Ketika sebuah task muncul lalu menekan tombol centang, muncul error di console: 
-    > `TodoList.jsx:12 Each child in a list should have a unique "key" prop. Check the render method of ForwardRef(motion.ul). It was passed a child from TodoList`
+### 1. Bug: Tidak Auto Refresh Token
+*   **Deskripsi**: Aplikasi tidak melakukan *auto refresh* token secara otomatis ketika token akses (*access token*) sudah kedaluwarsa. Akibatnya pengguna mungkin tiba-tiba kehilangan sesi (logout) atau mendapatkan error otorisasi saat mengakses API.
 *   **Status**: Open
-*   **Lokasi**: `src/features/todo/TodoList.jsx` (sekitar baris 12)
-*   **Kemungkinan Penyebab**: Saat melakukan *mapping* atau merender daftar `TodoItem` menggunakan Framer Motion (`<motion.ul>`), elemen anak tidak memiliki properti `key` yang unik atau nilainya `undefined`.
+*   **Target Perbaikan**: Mengimplementasikan *interceptor* pada fungsi pemanggilan API (`taskService.js` / `authService.js`) atau memanfaatkan `useEffect` untuk mendeteksi *response* `401 Unauthorized` dan secara otomatis memanggil `refreshSession` sebelum mengulang (retry) *request* yang gagal.
 
-### 2. Isi Task Tidak Muncul (Tampil seperti Dummy)
-*   **Deskripsi**: Saat menambahkan *task* baru, item list yang muncul di antarmuka terlihat kosong (seperti elemen *dummy*) dan tidak memiliki teks/isi yang sesuai dengan yang di-input.
+### 2. Fitur Baru: Filter Tasks
+*   **Deskripsi**: Buatkan fitur filter untuk daftar tugas agar memudahkan pengguna mencari tugas spesifik. Filter harus mencakup:
+    *   **Pencarian berdasarkan Nama (Judul)**: Text input untuk mencari tugas dengan kata kunci tertentu.
+    *   **Urutkan berdasarkan Deadline Terdekat**: Menyortir daftar agar tugas dengan deadline yang sudah dekat atau lewat berada di atas.
+    *   **Filter berdasarkan Status**: Dropdown atau tab untuk melihat tugas yang "Semua", "Belum Selesai (Pending)", dan "Selesai (Completed)".
 *   **Status**: Open
-*   **Kemungkinan Penyebab**: Struktur objek/data yang dikembalikan oleh API (`taskService.js` atau backend) setelah menambah task baru tidak cocok dengan struktur yang diharapkan oleh frontend, sehingga properti seperti judul (misal: `title` vs `name`) tidak terbaca dan menjadi kosong.
-
-### 3. Fungsi CRUD Tidak Real-time
-*   **Deskripsi**: Segala aksi modifikasi data (Create, Update, Delete) tidak langsung memperbarui tampilan secara *real-time*. Perubahan baru terlihat jika halaman dimuat ulang (*refresh*).
-*   **Status**: Open
-*   **Kemungkinan Penyebab**: *State management* (di dalam `TodoProvider`) gagal melakukan pembaruan state lokal (*optimistic update*) segera sesudah respons sukses dari API, atau fungsi *fetching* data tidak dipanggil ulang dengan benar setelah tindakan mutasi selesai.
+*   **Target Modifikasi**: Komponen `TodoList.jsx`, penambahan *state* filter di `DashboardPage.jsx` atau `TodoProvider.jsx`.
