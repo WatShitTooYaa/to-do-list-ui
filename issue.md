@@ -1,16 +1,14 @@
-# Known Bugs & Features Tracker
+# Known Bugs & Issues Tracker
 
-Berikut adalah daftar bug dan fitur yang perlu ditambahkan:
+Berikut adalah daftar *bug* terbaru yang ditemukan pada sistem routing dan autentikasi:
 
-### 1. Bug: Tidak Auto Refresh Token
-*   **Deskripsi**: Aplikasi tidak melakukan *auto refresh* token secara otomatis ketika token akses (*access token*) sudah kedaluwarsa. Akibatnya pengguna mungkin tiba-tiba kehilangan sesi (logout) atau mendapatkan error otorisasi saat mengakses API.
+### 1. Bug: Masalah Routing Autentikasi
+*   **Deskripsi**: Terdapat *error* pada sistem *routing*. Ketika pengguna belum login atau belum terautentikasi, perilaku perpindahan halaman (akses ke Dashboard) tidak tertangani dengan benar (mungkin terjadi *blank screen*, *error*, atau tidak diarahkan ke halaman login dengan semestinya).
 *   **Status**: Open
-*   **Target Perbaikan**: Mengimplementasikan *interceptor* pada fungsi pemanggilan API (`taskService.js` / `authService.js`) atau memanfaatkan `useEffect` untuk mendeteksi *response* `401 Unauthorized` dan secara otomatis memanggil `refreshSession` sebelum mengulang (retry) *request* yang gagal.
+*   **Target Perbaikan**: Memeriksa kembali logika *routing* manual di dalam `App.jsx` (khususnya fungsi `handleNavigate` dan pengecekan akses komponen). Memastikan pengguna yang belum terautentikasi langsung di- *redirect* (diarahkan) ke halaman `/login`.
 
-### 2. Fitur Baru: Filter Tasks
-*   **Deskripsi**: Buatkan fitur filter untuk daftar tugas agar memudahkan pengguna mencari tugas spesifik. Filter harus mencakup:
-    *   **Pencarian berdasarkan Nama (Judul)**: Text input untuk mencari tugas dengan kata kunci tertentu.
-    *   **Urutkan berdasarkan Deadline Terdekat**: Menyortir daftar agar tugas dengan deadline yang sudah dekat atau lewat berada di atas.
-    *   **Filter berdasarkan Status**: Dropdown atau tab untuk melihat tugas yang "Semua", "Belum Selesai (Pending)", dan "Selesai (Completed)".
+### 2. Bug: Gagal Akses Dashboard saat Access Token Habis
+*   **Deskripsi**: Ketika *access token* pengguna kedaluwarsa di tengah-tengah sesi (terutama saat mencoba mengakses atau me-*refresh* halaman Dashboard), pengguna langsung gagal mengakses halaman tersebut seolah-olah sudah *logout*.
+*   **Ekspektasi**: Aplikasi seharusnya secara otomatis mendeteksi kedaluwarsanya token, lalu memanggil *refresh token* (yang tersimpan di *cookie*). Jika *refresh token* masih valid, aplikasi harus memperbarui *access token* di latar belakang sehingga pengguna dapat terus mengakses Dashboard tanpa gangguan.
 *   **Status**: Open
-*   **Target Modifikasi**: Komponen `TodoList.jsx`, penambahan *state* filter di `DashboardPage.jsx` atau `TodoProvider.jsx`.
+*   **Target Perbaikan**: Memperbarui *state initialization* di `AuthProvider.jsx` atau hook `useAuth()`. Pastikan saat inisialisasi awal (aplikasi baru dimuat), aplikasi mencoba melakukan *silent refresh* (`refreshSession`) sebelum memutuskan bahwa `user` bernilai null.
