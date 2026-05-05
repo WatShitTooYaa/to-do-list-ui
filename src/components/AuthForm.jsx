@@ -11,12 +11,14 @@ export function AuthForm({ mode, onSubmit, onSwitch }) {
     password: '',
   })
   const [errors, setErrors] = useState({})
+  const [formError, setFormError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const validate = () => {
     const nextErrors = {}
 
     if (isRegister && values.name.trim().length < 2) {
-      nextErrors.name = 'Name must contain at least 2 characters.'
+      nextErrors.name = 'Username must contain at least 2 characters.'
     }
 
     if (!emailPattern.test(values.email)) {
@@ -38,7 +40,16 @@ export function AuthForm({ mode, onSubmit, onSwitch }) {
       return
     }
 
-    await onSubmit(values)
+    setFormError('')
+    setIsSubmitting(true)
+
+    try {
+      await onSubmit(values)
+    } catch (error) {
+      setFormError(error.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const updateValue = (field, value) => {
@@ -67,12 +78,12 @@ export function AuthForm({ mode, onSubmit, onSwitch }) {
       <div className="space-y-4">
         {isRegister && (
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Name</span>
+            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Username</span>
             <input
               value={values.name}
               onChange={(event) => updateValue('name', event.target.value)}
               className="mt-2 h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition-all focus:border-zinc-300 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
-              placeholder="Your name"
+              placeholder="tester123"
             />
             {errors.name && <FieldError message={errors.name} />}
           </label>
@@ -103,11 +114,23 @@ export function AuthForm({ mode, onSubmit, onSwitch }) {
         </label>
       </div>
 
+      {formError && (
+        <div className="mt-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 dark:border-red-900 dark:bg-red-500/15 dark:text-red-300">
+          <AlertCircle size={16} className="mt-0.5 shrink-0" />
+          <span>{formError}</span>
+        </div>
+      )}
+
       <button
         type="submit"
-        className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 dark:focus:ring-zinc-700"
+        disabled={isSubmitting}
+        className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-300 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 dark:focus:ring-zinc-700"
       >
-        {isRegister ? 'Create account' : 'Sign in'}
+        {isSubmitting
+          ? 'Please wait'
+          : isRegister
+            ? 'Create account'
+            : 'Sign in'}
         <ArrowRight size={16} />
       </button>
 

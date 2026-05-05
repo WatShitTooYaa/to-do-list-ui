@@ -6,7 +6,16 @@ import { useTodos } from '../context/useTodos'
 import { formatToday } from '../utils/date'
 
 export function DashboardPage() {
-  const { tasks, stats, addTask, toggleTask, deleteTask, updateTask } = useTodos()
+  const {
+    tasks,
+    stats,
+    isLoading,
+    error,
+    addTask,
+    toggleTask,
+    deleteTask,
+    updateTask,
+  } = useTodos()
 
   return (
     <main className="min-h-[calc(100vh-64px)] px-4 py-10 sm:py-14">
@@ -35,13 +44,25 @@ export function DashboardPage() {
           <TodoInput onAdd={addTask} />
         </div>
 
+        {error && (
+          <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:border-red-900 dark:bg-red-500/15 dark:text-red-300">
+            {error}
+          </div>
+        )}
+
         <div className="mt-8">
-          <TodoList
-            tasks={tasks}
-            onToggle={toggleTask}
-            onDelete={deleteTask}
-            onUpdate={updateTask}
-          />
+          {isLoading ? (
+            <div className="rounded-2xl border border-zinc-200 bg-white/90 px-4 py-8 text-center text-sm font-medium text-zinc-500 shadow-md shadow-zinc-200/70 dark:border-zinc-800 dark:bg-zinc-900/90 dark:text-zinc-400 dark:shadow-none">
+              Loading tasks
+            </div>
+          ) : (
+            <TodoList
+              tasks={tasks}
+              onToggle={toggleTask}
+              onDelete={deleteTask}
+              onUpdate={updateTask}
+            />
+          )}
         </div>
       </section>
     </main>
