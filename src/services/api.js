@@ -32,7 +32,12 @@ const parseResponse = async (response) => {
   }
 }
 
-const getErrorMessage = (data, fallback) => {
+const getErrorMessage = (data, fallback, status) => {
+  // Hide raw technical errors from server (500+)
+  if (status >= 500) {
+    return 'Terjadi kesalahan pada sistem, silakan coba lagi'
+  }
+
   if (!data) {
     return fallback
   }
@@ -75,32 +80,43 @@ export const request = async (path, options = {}) => {
     requestHeaders.Authorization = `Bearer ${accessToken}`
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    credentials: 'include',
-    ...requestOptions,
-    headers: requestHeaders,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
+  try {
+    const response = await fetch(`${API_URL}${path}`, {
+      credentials: 'include',
+      ...requestOptions,
+      headers: requestHeaders,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    })
 
-  if (response.status === 401 && auth && retry) {
-    const refreshed = await refreshAccessToken()
+    if (response.status === 401 && auth && retry) {
+      const refreshed = await refreshAccessToken()
 
-    if (refreshed) {
-      return request(path, { ...options, retry: false })
+      if (refreshed) {
+        return request(path, { ...options, retry: false })
+      }
     }
-  }
 
-  const data = await parseResponse(response)
+    const data = await parseResponse(response)
 
-  if (!response.ok) {
+    if (!response.ok) {
+      throw new ApiError(
+        getErrorMessage(data, `Request failed with status ${response.status}`, response.status),
+        response.status,
+        data,
+      )
+    }
+
+    return data
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error
+    }
+
     throw new ApiError(
-      getErrorMessage(data, `Request failed with status ${response.status}`),
-      response.status,
-      data,
+      'Tidak dapat terhubung ke server. Silakan periksa koneksi Anda.',
+      0,
     )
   }
-
-  return data
 }
 
 export const refreshAccessToken = async () => {
