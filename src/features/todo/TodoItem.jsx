@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { CalendarDays, Check, Edit3, Trash2, X, Loader2 } from 'lucide-react'
+import { CalendarDays, Check, Edit3, Trash2, X, Loader2, User } from 'lucide-react'
 import { useState } from 'react'
 import { formatDeadline, isOverdue } from '../../utils/date'
 
@@ -182,6 +182,10 @@ export function TodoItem({ task, onToggle, onDelete, onUpdate }) {
                 </span>
                 <span className={`rounded-full px-2 py-0.5 capitalize ${priorityStyles[priority]}`}>
                   {priority}
+                </span>
+                <span className="inline-flex items-center gap-1 text-zinc-400 dark:text-zinc-500">
+                  <User size={12} />
+                  <span>{task.creatorName}</span>
                 </span>
               </div>
             </motion.div>

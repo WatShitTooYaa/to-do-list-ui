@@ -1,26 +1,25 @@
-# Frontend Tasks: Implementasi UI Workspace
+# Frontend Tasks: Implement Workspace Members & Task Creator Info
 
 ## Deskripsi Tugas
-Sebagai kelanjutan dari fitur Workspace di backend, kita perlu mengimplementasikan antarmuka pengguna (UI) di frontend untuk mendukung fitur tersebut. 
-Terdapat dua pekerjaan utama:
-1. Mengubah halaman Dashboard untuk menampilkan daftar workspace dan tombol untuk membuat workspace baru.
-2. Membuat halaman detail Workspace (`/workspace/{id}`) yang berisi daftar tugas (tasks) spesifik untuk workspace tersebut.
+Sebagai kelanjutan dari pengembangan fitur Workspace, kita perlu menambahkan dua fungsionalitas utama di sisi frontend:
+1.  **Fitur Penambahan Anggota (Add Member):** Memungkinkan pengguna untuk menambahkan anggota baru ke dalam *workspace* mereka menggunakan email dan mengatur peran (role) dari anggota tersebut.
+2.  **Informasi Pembuat Task:** Menampilkan nama dari pembuat setiap task yang ada di dalam *workspace*.
 
 ---
 
-## 1. Perubahan Halaman Dashboard (`/dashboard`)
-Halaman dashboard saat ini menampilkan daftar *tasks*. Kita harus mengubah fungsinya menjadi daftar *workspaces*.
-- **Tampilan Utama:** Menampilkan daftar (*list* atau *grid*) dari *workspaces* yang dimiliki atau diikuti oleh user.
-- **Aksi Create Workspace:** Tambahkan tombol "Buat Workspace". Saat diklik, munculkan dialog/modal atau form kecil yang hanya meminta input **Nama Workspace**. Setelah di-submit, panggil endpoint API pembuatan workspace.
-- **Navigasi:** Jika user mengklik salah satu *workspace* dari daftar, arahkan (navigate) user ke route `/workspace/{id}`.
+## 1. Fitur Penambahan Anggota Workspace
+-   **Lokasi:** Halaman `WorkspaceDetailPage` (`/workspace/:id`).
+-   **UI/UX:** Tambahkan sebuah tombol "Add Member" (misal: ikon *UserPlus*) di bagian header atau di dekat judul Workspace. Saat diklik, munculkan dialog, modal, atau form sederhana.
+-   **Form Input:**
+    -   Input teks untuk **Email** anggota yang ingin ditambahkan.
+    -   Dropdown (`<select>`) untuk **Role** dengan dua pilihan *hardcoded*: `editor` dan `watcher`.
+    -   Tombol aksi: "Tambah" dan "Batal".
+-   **Integrasi API:** Akan memanggil endpoint layanan baru untuk menambah anggota ke workspace.
 
-## 2. Pembuatan Halaman Detail Workspace (`/workspace/{id}`)
-- **Route Baru:** Daftarkan route baru di pengaturan *router* (misal `App.jsx`), yaitu `/workspace/:id`.
-- **Proteksi Halaman:** Pastikan route ini bersifat *protected*, yang berarti hanya user yang terautentikasi (sudah login) yang dapat mengaksesnya.
-- **Isi Halaman:** Pindahkan komponen-komponen pengelolaan *task* (seperti input todo, list todo, fitur *overdue*, dsb) yang sebelumnya ada di Dashboard ke halaman ini.
-- **Integrasi API:** 
-  - Pastikan setiap request terkait *tasks* (misalnya mengambil list tugas, membuat tugas baru) selalu dikaitkan dengan `workspaceId` (didapat dari URL parameter `:id`).
-  - Perbarui pemanggilan API untuk task agar mengirim/menerima data berdasarkan workspace spesifik tersebut.
+## 2. Informasi Pembuat Task (Task Creator)
+-   **Lokasi:** Komponen `TodoItem` (atau komponen item task serupa yang dirender di daftar tugas).
+-   **Perubahan UI:** Pada setiap *item task*, tampilkan nama pembuat task tersebut dengan jelas (misalnya teks abu-abu kecil "Created by: John Doe" di bawah judul task).
+-   **Integrasi API:** Mengandalkan struktur data yang dikirim oleh backend yang (seharusnya) menyertakan informasi nama pengguna yang membuat *task* tersebut.
 
 ---
 
@@ -28,46 +27,65 @@ Halaman dashboard saat ini menampilkan daftar *tasks*. Kita harus mengubah fungs
 Untuk Junior Programmer (atau AI Assistant), ikuti urutan langkah-langkah berikut agar pengerjaan lebih terstruktur, aman, dan mudah di-*debug*:
 
 ### Langkah 1: Setup API Services
-1. Buka file `src/services/api.js`.
-2. Tambahkan fungsi baru untuk berinteraksi dengan API Workspace backend:
-   - `getWorkspaces()`: Memanggil endpoint untuk mengambil daftar workspace milik pengguna.
-   - `createWorkspace(name)`: Memanggil endpoint `POST` (misal `/api/workspaces`) dengan *payload* `{ name: "..." }`.
-   - Update fungsi manipulasi *tasks* yang sudah ada agar menerima dan mengirimkan `workspaceId`.
+1.  Buka file `src/services/workspaceService.js`.
+2.  Tambahkan fungsi baru `addWorkspaceMember` untuk memanggil endpoint dari backend:
+    ```javascript
+    export const addWorkspaceMember = async (workspaceId, { email, role }) => {
+        // Sesuaikan dengan route Elysia kalian (misal: /api/v1/workspaces/:workspaceId/members)
+        const data = await request(`/api/v1/workspaces/${workspaceId}/members`, {
+            method: 'POST',
+            credentials: 'include',
+            body: { email, role },
+        });
+        return data;
+    }
+    ```
+3.  Buka file `src/services/taskService.js`.
+4.  Cari fungsi `normalizeTask`. Fungsi ini bertugas memetakan data kotor dari API ke format rapi untuk aplikasi. Modifikasi pemetaannya agar juga menangkap nama pembuat. Contoh:
+    ```javascript
+    export const normalizeTask = (task) => {
+        if (!task) return null;
+        return {
+            id: task.id ?? task._id ?? null,
+            title: pickTaskTitle(task),
+            completed: pickTaskCompleted(task),
+            deadline: toDateInputValue(task.deadline),
+            priority: normalizePriority(task.priority),
+            // Tambahkan ini: (Sesuaikan dengan properti aktual dari response Backend)
+            creatorName: task?.user?.name || task?.creatorName || 'Unknown', 
+        }
+    }
+    ```
 
-### Langkah 2: Buat Halaman Detail Workspace
-1. Buat file/komponen baru, misalnya `src/pages/WorkspaceDetail.jsx`.
-2. Gunakan *hooks* dari *router* (seperti `useParams` dari `react-router-dom`) untuk menangkap nilai `:id` dari URL.
-3. **Pindahkan Logika:** Pindahkan logika menampilkan *todo list*, *loading state*, dan *add task* yang tadinya bersemayam di Dashboard lama ke komponen baru ini.
-4. Saat komponen pertama kali dirender (`useEffect`), ambil data task spesifik untuk *workspace* tersebut menggunakan `workspaceId` dari URL.
+### Langkah 2: Buat UI Penambahan Member
+1.  Buka file `src/pages/WorkspaceDetailPage.jsx`.
+2.  Siapkan state lokal untuk interaksi form:
+    -   `isAddMemberOpen` (boolean, default `false`)
+    -   `memberEmail` (string, default `''`)
+    -   `memberRole` (string, default `'watcher'`)
+    -   `isSubmitting` (boolean, default `false`)
+3.  Tambahkan tombol "Add Member" di dekat bagian header (misalnya bersebelahan dengan jumlah task "open"). 
+4.  Render form sederhana (bisa *inline* atau di dalam semacam kotak modal absolute) saat `isAddMemberOpen === true`. Pastikan ada input email dan dropdown peran.
+5.  Buat fungsi *handler* `handleAddMember(e)`:
+    -   Panggil `e.preventDefault()`.
+    -   Set `isSubmitting(true)`.
+    -   Panggil service `addWorkspaceMember(workspaceId, { email: memberEmail, role: memberRole })` menggunakan `try/catch`.
+    -   Jika berhasil, tutup form dan kosongkan input.
+    -   Jika error, tangkap pesan error dan tampilkan (misal: via `setError` atau alert).
 
-### Langkah 3: Rombak Halaman Dashboard
-1. Buka file `src/pages/Dashboard.jsx` (atau di mana kamu menempatkan Dashboard sebelumnya).
-2. Hapus atau bersihkan elemen-elemen *task management* (karena sudah dipindah ke `WorkspaceDetail`).
-3. Buat state lokal (misal `[workspaces, setWorkspaces] = useState([])`).
-4. Saat komponen *mount*, panggil `getWorkspaces()` dan simpan datanya ke *state*.
-5. Render list *workspaces* tersebut dengan tampilan *UI* yang interaktif (misal dibungkus tag Link atau onClick *handler* yang mengarah ke `/workspace/{id}`).
-6. Tambahkan UI Form sederhana (bisa modal atau form statis di atas/bawah) dengan satu input teks (Nama Workspace) dan tombol *Submit* untuk memanggil fungsi `createWorkspace()`.
+### Langkah 3: Update Tampilan Item Task
+1.  Buka file `src/features/todo/TodoItem.jsx` (atau komponen mana pun yang dirender oleh `TodoList.jsx`).
+2.  Karena fungsi `normalizeTask` pada Langkah 1 sudah kita perbarui, maka properti `task` kini mengandung `task.creatorName`.
+3.  Gunakan informasi tersebut untuk dirender di dalam UI item task. Sisipkan elemen `<p>` atau `<span>` dengan ukuran `text-xs` berwarna netral (misalnya `text-zinc-400`).
+4.  Pastikan penambahan teks ini tidak merusak estetika dan responsivitas tata letak (flexbox) dari item tugas tersebut.
 
-### Langkah 4: Update Routing Sistem
-1. Buka file utama routing aplikasi (seperti `src/App.jsx`).
-2. Definisikan route baru:
-   ```jsx
-   <Route element={<ProtectedRoute />}>
-     {/* ... route protected lainnya ... */}
-     <Route path="/workspace/:id" element={<WorkspaceDetail />} />
-   </Route>
-   ```
-3. Pastikan tidak ada konflik dengan route yang sudah ada.
-
-### Langkah 5: Testing
-1. Login ke dalam aplikasi.
-2. Masuk ke halaman Dashboard, cek apakah ada daftar workspace kosong (jika pengguna baru) dan tes membuat workspace baru bernama "Project A".
-3. Pastikan *loading state* berjalan dengan baik dan setelah berhasil, "Project A" muncul di layar.
-4. Klik "Project A", pastikan URL berpindah menjadi `/workspace/{id-workspace}` dan tidak terjadi *error 404* atau *blank screen*.
-5. Di dalam `/workspace/...` tersebut, tes membuat satu atau dua task dan pastikan task tidak bocor ke workspace lainnya.
+### Langkah 4: Testing Terintegrasi
+1.  Masuk ke halaman `WorkspaceDetailPage`.
+2.  Klik tombol "Add Member", isi form menggunakan email yang **valid dan sudah terdaftar di sistem**. 
+    *(Catatan: Backend akan mengembalikan error jika email tidak terdaftar atau sudah menjadi member)*.
+3.  Periksa respon API di *network tab* browser, pastikan integrasi berhasil.
+4.  Lihat daftar task. Jika task yang ditampilkan memuat informasi pembuat dengan benar, berarti Langkah 3 berhasil. Jika masih 'Unknown', sampaikan ke developer backend agar mereka merelasikan tabel task dengan tabel users dan mengembalikan field nama di respon JSON.
 
 ---
 **Catatan Senior:**
-1. Hati-hati saat merombak *Dashboard*. Pastikan semua *import* yang tidak lagi dipakai dihapus untuk menghindari *lint error*.
-2. Selalu gunakan penanganan *error* (try-catch) setiap kali memanggil layanan API untuk memberikan notifikasi visual (misal *toast* atau pesan merah) jika pembuatan workspace gagal.
-3. Selalu pertahankan desain estetika aplikasi (jangan biarkan komponen baru tampil berantakan atau *un-styled*).
+Fokuslah menyelesaikan fungsionalitasnya satu per satu. Pastikan form penambahan anggota dikelola dengan elegan (cegah double click saat *loading*, tampilkan *feedback* error secara visual, dsb). Semangat!

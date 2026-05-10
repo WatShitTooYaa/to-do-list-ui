@@ -20,3 +20,12 @@ export const createWorkspace = async (name) => {
 
     return data?.data ?? data
 }
+
+export const addWorkspaceMember = async (workspaceId, { email, role }) => {
+    const data = await request(`/api/v1/workspaces/${workspaceId}/members`, {
+        method: 'POST',
+        credentials: 'include',
+        body: { email, role },
+    })
+    return data
+}

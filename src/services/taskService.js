@@ -76,6 +76,7 @@ export const normalizeTask = (task) => {
         completed: pickTaskCompleted(task),
         deadline: toDateInputValue(task.deadline),
         priority: normalizePriority(task.priority ?? task.taskPriority ?? task.level),
+        creatorName: task?.user?.name || task?.creatorName || 'Unknown',
     }
 }
 
