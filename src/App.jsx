@@ -6,6 +6,7 @@ import { ThemeProvider } from './context/ThemeProvider'
 import { TodoProvider } from './context/TodoProvider'
 import { useAuth } from './context/useAuth'
 import { DashboardPage } from './pages/DashboardPage'
+import { WorkspaceDetailPage } from './pages/WorkspaceDetailPage'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { ProfilePage } from './pages/ProfilePage'
@@ -20,13 +21,28 @@ const pagePaths = {
   profile: '/profile',
 }
 
-const pathPages = Object.fromEntries(
-  Object.entries(pagePaths).map(([page, path]) => [path, page]),
-)
+const getPageFromPath = (path) => {
+  if (path === '/') return { page: 'landing' }
+  if (path === '/login') return { page: 'login' }
+  if (path === '/register') return { page: 'register' }
+  if (path === '/dashboard') return { page: 'dashboard' }
+  if (path === '/profile') return { page: 'profile' }
+  if (path === '/about') return { page: 'about' }
+  
+  const workspaceMatch = path.match(/^\/workspace\/([^/]+)$/)
+  if (workspaceMatch) {
+    return { page: 'workspace', params: { id: workspaceMatch[1] } }
+  }
+  
+  return { page: 'landing' }
+}
 
-const getPageFromPath = (path) => pathPages[path] ?? 'landing'
-
-const getPathFromPage = (page) => pagePaths[page] ?? pagePaths.landing
+const getPathFromPage = (page, params = {}) => {
+  if (page === 'workspace' && params.id) {
+    return `/workspace/${params.id}`
+  }
+  return pagePaths[page] ?? pagePaths.landing
+}
 
 function App() {
   return (
@@ -43,7 +59,7 @@ function App() {
 function AppContent() {
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname)
   const { user, isAuthReady } = useAuth()
-  const currentPage = getPageFromPath(currentPath)
+  const { page: currentPage, params: pageParams } = getPageFromPath(currentPath)
 
   useEffect(() => {
     const handlePopState = () => {
@@ -55,11 +71,11 @@ function AppContent() {
   }, [])
 
   const handleNavigate = useCallback(
-    (page) => {
-      const nextPage = !user && ['dashboard', 'profile'].includes(page)
+    (page, params = {}) => {
+      const nextPage = !user && ['dashboard', 'profile', 'workspace'].includes(page)
         ? 'login'
         : page
-      const nextPath = getPathFromPage(nextPage)
+      const nextPath = getPathFromPage(nextPage, params)
 
       if (window.location.pathname !== nextPath) {
         window.history.pushState({}, '', nextPath)
@@ -83,7 +99,7 @@ function AppContent() {
   useEffect(() => {
     if (!isAuthReady) return
 
-    const isProtectedRoute = ['dashboard', 'profile'].includes(currentPage)
+    const isProtectedRoute = ['dashboard', 'profile', 'workspace'].includes(currentPage)
     const isAuthRoute = ['login', 'register'].includes(currentPage)
 
     if (isProtectedRoute && !user) {
@@ -100,7 +116,13 @@ function AppContent() {
       case 'register':
         return <RegisterPage onNavigate={handleAuthNavigate} />
       case 'dashboard':
-        return user ? <DashboardPage /> : <LoginPage onNavigate={handleAuthNavigate} />
+        return user ? <DashboardPage onNavigate={handleNavigate} /> : <LoginPage onNavigate={handleAuthNavigate} />
+      case 'workspace':
+        return user ? (
+          <WorkspaceDetailPage workspaceId={pageParams?.id} />
+        ) : (
+          <LoginPage onNavigate={handleAuthNavigate} />
+        )
       case 'profile':
         return user ? <ProfilePage /> : <LoginPage onNavigate={handleAuthNavigate} />
       case 'about':
@@ -108,7 +130,7 @@ function AppContent() {
       default:
         return <LandingPage onNavigate={handleNavigate} />
     }
-  }, [currentPage, handleAuthNavigate, handleNavigate, user])
+  }, [currentPage, handleAuthNavigate, handleNavigate, user, pageParams])
 
   if (!isAuthReady) {
     return (
