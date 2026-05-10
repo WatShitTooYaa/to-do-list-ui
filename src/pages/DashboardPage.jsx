@@ -1,80 +1,48 @@
-import { CalendarDays, Clock3, Search, SlidersHorizontal } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { TodoInput } from '../features/todo/TodoInput'
-import { TodoList } from '../features/todo/TodoList'
-import { TodoStats } from '../features/todo/TodoStats'
-import { useTodos } from '../context/useTodos'
+import { CalendarDays, Plus, Layout, ArrowRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { getWorkspaces, createWorkspace } from '../services/workspaceService'
 import { formatToday } from '../utils/date'
 
-const statusFilters = [
-  { value: 'all', label: 'All' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'completed', label: 'Completed' },
-]
+export function DashboardPage({ onNavigate }) {
+  const [workspaces, setWorkspaces] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [newWorkspaceName, setNewWorkspaceName] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
 
-const getDeadlineScore = (task) => {
-  if (!task.deadline) {
-    return Number.POSITIVE_INFINITY
-  }
-
-  const deadlineDate = new Date(`${task.deadline}T00:00:00`)
-
-  if (Number.isNaN(deadlineDate.getTime())) {
-    return Number.POSITIVE_INFINITY
-  }
-
-  return deadlineDate.getTime()
-}
-
-const compareByDeadline = (leftTask, rightTask) => {
-  const leftScore = getDeadlineScore(leftTask)
-  const rightScore = getDeadlineScore(rightTask)
-
-  if (leftScore !== rightScore) {
-    return leftScore - rightScore
-  }
-
-  return leftTask.title.localeCompare(rightTask.title)
-}
-
-export function DashboardPage() {
-  const {
-    tasks,
-    stats,
-    isLoading,
-    error,
-    addTask,
-    toggleTask,
-    deleteTask,
-    updateTask,
-  } = useTodos()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [sortByDeadline, setSortByDeadline] = useState(true)
-
-  const filteredTasks = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase()
-
-    const nextTasks = tasks.filter((task) => {
-      const matchesQuery = query ? task.title.toLowerCase().includes(query) : true
-      const matchesStatus =
-        statusFilter === 'all'
-          ? true
-          : statusFilter === 'completed'
-            ? task.completed
-            : !task.completed
-
-      return matchesQuery && matchesStatus
-    })
-
-    if (!sortByDeadline) {
-      return nextTasks
+  const loadWorkspaces = async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      const data = await getWorkspaces()
+      setWorkspaces(data)
+    } catch (err) {
+      setError(err.message || 'Failed to load workspaces')
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    return [...nextTasks].sort(compareByDeadline)
-  }, [searchQuery, sortByDeadline, statusFilter, tasks])
+  useEffect(() => {
+    loadWorkspaces()
+  }, [])
 
-  const hasActiveFilters = searchQuery.trim().length > 0 || statusFilter !== 'all'
+  const handleCreateWorkspace = async (e) => {
+    e.preventDefault()
+    if (!newWorkspaceName.trim()) return
+
+    setIsCreating(true)
+    setError('')
+    try {
+      await createWorkspace(newWorkspaceName.trim())
+      setNewWorkspaceName('')
+      await loadWorkspaces()
+    } catch (err) {
+      setError(err.message || 'Failed to create workspace')
+    } finally {
+      setIsCreating(false)
+    }
+  }
 
   return (
     <main className="min-h-[calc(100vh-64px)] px-4 py-10 sm:py-14">
@@ -86,73 +54,29 @@ export function DashboardPage() {
               <span>Today, {formatToday()}</span>
             </div>
             <h1 className="text-3xl font-medium tracking-normal text-zinc-950 dark:text-zinc-50 sm:text-4xl">
-              Focus list
+              My Workspaces
             </h1>
-          </div>
-
-          <div className="w-fit rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm font-medium text-zinc-500 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:shadow-none">
-            {stats.open} open
           </div>
         </header>
 
-        <div className="mt-8">
-          <TodoStats stats={stats} />
-        </div>
-
-        <div className="mt-8">
-          <TodoInput onAdd={addTask} />
-        </div>
-
-        <div className="mt-5 rounded-2xl border border-zinc-200 bg-white/90 p-4 shadow-sm shadow-zinc-200/60 transition-colors dark:border-zinc-800 dark:bg-zinc-900/90 dark:shadow-none">
-          <div className="flex items-center gap-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">
-            <SlidersHorizontal size={16} />
-            <span>Filter tasks</span>
-          </div>
-
-          <div className="mt-4 grid gap-3">
-            <label className="flex h-12 items-center gap-3 rounded-xl border border-zinc-200/80 bg-white/80 px-4 shadow-sm shadow-zinc-200/60 transition-all duration-200 focus-within:border-zinc-300 focus-within:bg-white focus-within:ring-1 focus-within:ring-zinc-300 dark:border-zinc-800 dark:bg-zinc-950/50 dark:shadow-none dark:focus-within:border-zinc-700 dark:focus-within:bg-zinc-900 dark:focus-within:ring-zinc-700">
-              <Search size={18} className="shrink-0 text-zinc-400" />
-              <input
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search by title"
-                className="h-full w-full bg-transparent text-[15px] font-normal text-zinc-900 placeholder:text-zinc-400 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-500"
-              />
-            </label>
-
-            <div className="flex flex-wrap gap-2">
-              {statusFilters.map((filter) => {
-                const isActive = statusFilter === filter.value
-
-                return (
-                  <button
-                    key={filter.value}
-                    type="button"
-                    onClick={() => setStatusFilter(filter.value)}
-                    className={`rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'border-zinc-950 bg-zinc-950 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-950'
-                        : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:text-zinc-100'
-                    }`}
-                  >
-                    {filter.label}
-                  </button>
-                )
-              })}
-            </div>
-
-            <label className="flex items-center gap-3 rounded-xl border border-zinc-200/80 bg-white/80 px-4 py-3 text-sm font-medium text-zinc-600 shadow-sm shadow-zinc-200/60 transition-all duration-200 dark:border-zinc-800 dark:bg-zinc-950/50 dark:text-zinc-300 dark:shadow-none">
-              <input
-                type="checkbox"
-                checked={sortByDeadline}
-                onChange={(event) => setSortByDeadline(event.target.checked)}
-                className="h-4 w-4 rounded border-zinc-300 text-zinc-950 focus:ring-zinc-300 dark:border-zinc-700 dark:text-zinc-50 dark:focus:ring-zinc-700"
-              />
-              <Clock3 size={16} className="shrink-0 text-zinc-400" />
-              <span>Soonest deadline first</span>
-            </label>
-          </div>
-        </div>
+        <form onSubmit={handleCreateWorkspace} className="mt-8 flex gap-3">
+          <input
+            type="text"
+            value={newWorkspaceName}
+            onChange={(e) => setNewWorkspaceName(e.target.value)}
+            placeholder="New workspace name"
+            disabled={isCreating}
+            className="flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-normal text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none focus:ring-1 focus:ring-zinc-300 dark:border-zinc-800 dark:bg-zinc-950/50 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
+          />
+          <button
+            type="submit"
+            disabled={isCreating || !newWorkspaceName.trim()}
+            className="flex items-center gap-2 rounded-xl bg-zinc-950 px-6 py-3 text-sm font-medium text-white transition-all hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
+          >
+            <Plus size={18} />
+            <span>Create</span>
+          </button>
+        </form>
 
         {error && (
           <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:border-red-900 dark:bg-red-500/15 dark:text-red-300">
@@ -163,27 +87,39 @@ export function DashboardPage() {
         <div className="mt-8">
           {isLoading ? (
             <div className="rounded-2xl border border-zinc-200 bg-white/90 px-4 py-8 text-center text-sm font-medium text-zinc-500 shadow-md shadow-zinc-200/70 dark:border-zinc-800 dark:bg-zinc-900/90 dark:text-zinc-400 dark:shadow-none">
-              Loading tasks
+              Loading workspaces...
+            </div>
+          ) : workspaces.length === 0 ? (
+            <div className="rounded-2xl border border-zinc-200 bg-white/90 px-4 py-12 text-center shadow-md shadow-zinc-200/70 dark:border-zinc-800 dark:bg-zinc-900/90 dark:shadow-none">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+                <Layout size={24} className="text-zinc-400" />
+              </div>
+              <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">No workspaces yet</h3>
+              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                Create your first workspace to start managing tasks.
+              </p>
             </div>
           ) : (
-            <TodoList
-              tasks={filteredTasks}
-              onToggle={toggleTask}
-              onDelete={deleteTask}
-              onUpdate={updateTask}
-              emptyTitle={
-                tasks.length > 0 && filteredTasks.length === 0
-                  ? 'No tasks match filters'
-                  : 'All clear. Enjoy your day!'
-              }
-              emptyDescription={
-                tasks.length > 0 && filteredTasks.length === 0
-                  ? hasActiveFilters
-                    ? 'Try a different keyword, status, or sort option.'
-                    : 'Nothing matches current view.'
-                  : 'Nothing needs your attention.'
-              }
-            />
+            <div className="grid gap-4">
+              {workspaces.map((workspace) => (
+                <button
+                  key={workspace.id}
+                  onClick={() => onNavigate('workspace', { id: workspace.id })}
+                  className="group flex items-center justify-between rounded-2xl border border-zinc-200 bg-white p-5 text-left transition-all hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700 dark:hover:shadow-none"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-50 dark:bg-zinc-950">
+                      <Layout size={20} className="text-zinc-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-zinc-900 dark:text-zinc-100">{workspace.name}</h3>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400">Click to view tasks</p>
+                    </div>
+                  </div>
+                  <ArrowRight size={18} className="text-zinc-300 transition-transform group-hover:translate-x-1 dark:text-zinc-700" />
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </section>

@@ -1,5 +1,7 @@
 import { request } from './api'
 
+const ENDPOINT_URL = '/api/v1/workspaces/'
+
 const normalizePriority = (priority) =>
     ['low', 'medium', 'high'].includes(priority) ? priority : 'medium'
 
@@ -9,10 +11,10 @@ const pickTaskTitle = (task) =>
 const pickTaskCompleted = (task) =>
     Boolean(
         task?.completed ??
-            task?.isCompleted ??
-            task?.is_completed ??
-            task?.done ??
-            task?.status === 'done',
+        task?.isCompleted ??
+        task?.is_completed ??
+        task?.done ??
+        task?.status === 'done',
     )
 
 const toDateInputValue = (deadline) => {
@@ -77,15 +79,17 @@ export const normalizeTask = (task) => {
     }
 }
 
-export const getTasks = async () => {
-    const data = await request('/api/v1/tasks', {
+export const getTasks = async (workspaceId) => {
+    const url = workspaceId ? `${ENDPOINT_URL}${workspaceId}/tasks` : '/api/v1/tasks'
+    const data = await request(url, {
         credentials: 'include',
     })
     return unwrapTasks(data).map(normalizeTask).filter(Boolean)
 }
 
-export const createTask = async ({ title, deadline = '', priority = 'medium' }) => {
-    const data = await request('/api/v1/tasks', {
+export const createTask = async ({ title, deadline = '', priority = 'medium', workspaceId }) => {
+    const url = workspaceId ? `${ENDPOINT_URL}${workspaceId}/tasks` : '/api/v1/tasks'
+    const data = await request(url, {
         method: 'POST',
         credentials: 'include',
         body: {
@@ -94,13 +98,14 @@ export const createTask = async ({ title, deadline = '', priority = 'medium' }) 
             isCompleted: false,
             deadline: toApiDeadline(deadline),
             priority,
+            workspaceId,
         },
     })
 
     return normalizeTask(unwrapTask(data))
 }
 
-export const updateTask = async (taskId, updates) => {
+export const updateTask = async (workspaceId, taskId, updates) => {
     const body = {}
 
     if (updates.title !== undefined) {
@@ -121,7 +126,7 @@ export const updateTask = async (taskId, updates) => {
         body.priority = updates.priority
     }
 
-    const data = await request(`/api/v1/tasks/${taskId}`, {
+    const data = await request(`${ENDPOINT_URL}${workspaceId}/tasks/${taskId}`, {
         method: 'PATCH',
         body,
     })
@@ -129,7 +134,7 @@ export const updateTask = async (taskId, updates) => {
     return normalizeTask(unwrapTask(data))
 }
 
-export const deleteTask = (taskId) =>
-    request(`/api/v1/tasks/${taskId}`, {
+export const deleteTask = (taskId, workspaceId) =>
+    request(`${ENDPOINT_URL}${workspaceId}/tasks/${taskId}`, {
         method: 'DELETE',
     })
