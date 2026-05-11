@@ -3,39 +3,23 @@ import { CalendarDays, Check, Edit3, Trash2, X, Loader2, User } from 'lucide-rea
 import { useState } from 'react'
 import { formatDeadline, isOverdue } from '../../utils/date'
 
-const priorityStyles = {
-  low: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
-  medium: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
-  high: 'bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-300',
-}
 
-const priorityOptions = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-]
 
-const getPriority = (priority) =>
-  ['low', 'medium', 'high'].includes(priority) ? priority : 'medium'
-
-export function TodoItem({ task, onToggle, onDelete, onUpdate }) {
+export function TodoItem({ task, index, onToggle, onDelete, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(task.title)
-  const [draftPriority, setDraftPriority] = useState(getPriority(task.priority))
   const [isProcessingToggle, setIsProcessingToggle] = useState(false)
   const [isProcessingDelete, setIsProcessingDelete] = useState(false)
   const deadlineLabel = formatDeadline(task.deadline)
   const overdue = isOverdue(task.deadline, task.completed)
-  const priority = getPriority(task.priority)
 
   const finishEditing = () => {
     const title = draft.trim()
 
     if (title) {
-      onUpdate(task.id, { title, priority: draftPriority })
+      onUpdate(task.id, { title })
     } else {
       setDraft(task.title)
-      setDraftPriority(priority)
     }
 
     setIsEditing(false)
@@ -43,7 +27,6 @@ export function TodoItem({ task, onToggle, onDelete, onUpdate }) {
 
   const cancelEditing = () => {
     setDraft(task.title)
-    setDraftPriority(priority)
     setIsEditing(false)
   }
 
@@ -76,6 +59,9 @@ export function TodoItem({ task, onToggle, onDelete, onUpdate }) {
       transition={{ duration: 0.22, ease: 'easeOut' }}
       className="group flex min-h-14 items-center gap-3 rounded-xl px-2 py-3 transition-colors duration-200 hover:bg-white/70 dark:hover:bg-zinc-800/70"
     >
+      <span className="w-6 shrink-0 text-center text-xs font-medium text-zinc-400 dark:text-zinc-500">
+        {index + 1}
+      </span>
       <button
         type="button"
         onClick={handleToggle}
@@ -102,7 +88,7 @@ export function TodoItem({ task, onToggle, onDelete, onUpdate }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="grid gap-2 sm:grid-cols-[1fr_7rem]"
+              className="grid gap-2"
               onBlur={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget)) {
                   finishEditing()
@@ -124,18 +110,7 @@ export function TodoItem({ task, onToggle, onDelete, onUpdate }) {
                 }}
                 className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[15px] font-normal text-zinc-900 shadow-sm transition-all duration-200 focus:border-zinc-300 focus:outline-none focus:ring-1 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:shadow-none dark:focus:border-zinc-600 dark:focus:ring-zinc-700"
               />
-              <select
-                value={draftPriority}
-                onChange={(event) => setDraftPriority(event.target.value)}
-                aria-label="Edit task priority"
-                className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 shadow-sm outline-none transition-all duration-200 focus:border-zinc-300 focus:ring-1 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:shadow-none dark:focus:border-zinc-600 dark:focus:ring-zinc-700"
-              >
-                {priorityOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+
             </motion.div>
           ) : (
             <motion.div
@@ -180,9 +155,7 @@ export function TodoItem({ task, onToggle, onDelete, onUpdate }) {
                   <CalendarDays size={12} />
                   {deadlineLabel}
                 </span>
-                <span className={`rounded-full px-2 py-0.5 capitalize ${priorityStyles[priority]}`}>
-                  {priority}
-                </span>
+
                 <span className="inline-flex items-center gap-1 text-zinc-400 dark:text-zinc-500">
                   <User size={12} />
                   <span>{task.creatorName}</span>

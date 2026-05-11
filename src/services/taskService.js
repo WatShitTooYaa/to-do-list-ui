@@ -2,8 +2,7 @@ import { request } from './api'
 
 const ENDPOINT_URL = '/api/v1/workspaces/'
 
-const normalizePriority = (priority) =>
-    ['low', 'medium', 'high'].includes(priority) ? priority : 'medium'
+
 
 const pickTaskTitle = (task) =>
     task?.title ?? task?.name ?? task?.taskName ?? task?.text ?? task?.description ?? ''
@@ -75,7 +74,6 @@ export const normalizeTask = (task) => {
         title: pickTaskTitle(task),
         completed: pickTaskCompleted(task),
         deadline: toDateInputValue(task.deadline),
-        priority: normalizePriority(task.priority ?? task.taskPriority ?? task.level),
         creatorName: task?.user?.name || task?.creatorName || 'Unknown',
     }
 }
@@ -88,7 +86,7 @@ export const getTasks = async (workspaceId) => {
     return unwrapTasks(data).map(normalizeTask).filter(Boolean)
 }
 
-export const createTask = async ({ title, deadline = '', priority = 'medium', workspaceId }) => {
+export const createTask = async ({ title, deadline = '', workspaceId }) => {
     const url = workspaceId ? `${ENDPOINT_URL}${workspaceId}/tasks` : '/api/v1/tasks'
     const data = await request(url, {
         method: 'POST',
@@ -98,7 +96,6 @@ export const createTask = async ({ title, deadline = '', priority = 'medium', wo
             name: title,
             isCompleted: false,
             deadline: toApiDeadline(deadline),
-            priority,
             workspaceId,
         },
     })
@@ -123,9 +120,7 @@ export const updateTask = async (workspaceId, taskId, updates) => {
         body.deadline = toApiDeadline(updates.deadline)
     }
 
-    if (updates.priority !== undefined) {
-        body.priority = updates.priority
-    }
+
 
     const data = await request(`${ENDPOINT_URL}${workspaceId}/tasks/${taskId}`, {
         method: 'PATCH',

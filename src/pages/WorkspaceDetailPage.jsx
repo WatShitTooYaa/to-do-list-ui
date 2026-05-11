@@ -1,11 +1,14 @@
 import { CalendarDays, Clock3, Search, SlidersHorizontal, ArrowLeft, UserPlus, X, Loader2 } from 'lucide-react'
-import { addWorkspaceMember } from '../services/workspaceService'
+import { addWorkspaceMember, getWorkspaceById } from '../services/workspaceService'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useMemo, useState } from 'react'
 import { TodoInput } from '../features/todo/TodoInput'
 import { TodoList } from '../features/todo/TodoList'
 import { TodoStats } from '../features/todo/TodoStats'
 import { useTodos } from '../context/useTodos'
 import { formatToday } from '../utils/date'
+
+const TASKS_PER_PAGE = 10
 
 const statusFilters = [
   { value: 'all', label: 'All' },
@@ -54,6 +57,7 @@ export function WorkspaceDetailPage({ workspaceId }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortByDeadline, setSortByDeadline] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Add Member states
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
@@ -62,9 +66,15 @@ export function WorkspaceDetailPage({ workspaceId }) {
   const [isSubmittingMember, setIsSubmittingMember] = useState(false)
   const [memberError, setMemberError] = useState('')
 
+  const [workspace, setWorkspace] = useState(null)
+  const userRole = workspace?.role || workspace?.userRole || null
+
   useEffect(() => {
     if (workspaceId) {
       loadTasks(workspaceId)
+      getWorkspaceById(workspaceId)
+        .then(setWorkspace)
+        .catch(() => {})
     }
   }, [workspaceId, loadTasks])
 
@@ -89,6 +99,14 @@ export function WorkspaceDetailPage({ workspaceId }) {
 
     return [...nextTasks].sort(compareByDeadline)
   }, [searchQuery, sortByDeadline, statusFilter, tasks])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, statusFilter, sortByDeadline])
+
+  const totalPages = Math.ceil(filteredTasks.length / TASKS_PER_PAGE)
+  const startIndex = (currentPage - 1) * TASKS_PER_PAGE
+  const pagedTasks = filteredTasks.slice(startIndex, startIndex + TASKS_PER_PAGE)
 
   const hasActiveFilters = searchQuery.trim().length > 0 || statusFilter !== 'all'
 
@@ -132,93 +150,118 @@ export function WorkspaceDetailPage({ workspaceId }) {
               <span>Today, {formatToday()}</span>
             </div>
             <h1 className="text-3xl font-medium tracking-normal text-zinc-950 dark:text-zinc-50 sm:text-4xl">
-              Workspace Tasks
+              {workspace?.name || 'Workspace Tasks'}
             </h1>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsAddMemberOpen(true)}
-              className="flex h-9 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              <UserPlus size={15} />
-              <span>Add Member</span>
-            </button>
+            {userRole === 'owner' && (
+              <button
+                onClick={() => setIsAddMemberOpen(true)}
+                className="flex h-9 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                <UserPlus size={15} />
+                <span>Add Member</span>
+              </button>
+            )}
             <div className="w-fit rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm font-medium text-zinc-500 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:shadow-none">
               {stats.open} open
             </div>
           </div>
-        </header>
+      </section>
 
+      <AnimatePresence>
         {isAddMemberOpen && (
-          <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">Add Workspace Member</h2>
-              <button
-                onClick={() => setIsAddMemberOpen(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleAddMember} className="grid gap-4">
-              <div className="grid gap-1.5">
-                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  User Email
-                </label>
-                <input
-                  type="email"
-                  value={memberEmail}
-                  onChange={(e) => setMemberEmail(e.target.value)}
-                  placeholder="user@example.com"
-                  required
-                  className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm outline-none transition-all focus:border-zinc-300 focus:ring-1 focus:ring-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Role
-                </label>
-                <select
-                  value={memberRole}
-                  onChange={(e) => setMemberRole(e.target.value)}
-                  className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm outline-none transition-all focus:border-zinc-300 focus:ring-1 focus:ring-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
-                >
-                  <option value="editor">Editor</option>
-                  <option value="watcher">Watcher</option>
-                </select>
-              </div>
-              {memberError && (
-                <p className="text-xs font-medium text-red-600 dark:text-red-400">
-                  {memberError}
-                </p>
-              )}
-              <div className="flex justify-end gap-3 pt-2">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setIsAddMemberOpen(false)}
+            />
+
+            {/* Dialog */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="relative w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
+                  Add Workspace Member
+                </h2>
                 <button
-                  type="button"
                   onClick={() => setIsAddMemberOpen(false)}
-                  className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingMember}
-                  className="flex items-center gap-2 rounded-xl bg-zinc-950 px-5 py-2 text-sm font-medium text-white transition-all hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
-                >
-                  {isSubmittingMember ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Adding...</span>
-                    </>
-                  ) : (
-                    <span>Add Member</span>
-                  )}
+                  <X size={20} />
                 </button>
               </div>
-            </form>
+              <form onSubmit={handleAddMember} className="grid gap-4">
+                <div className="grid gap-1.5">
+                  <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    User Email
+                  </label>
+                  <input
+                    type="email"
+                    value={memberEmail}
+                    onChange={(e) => setMemberEmail(e.target.value)}
+                    placeholder="user@example.com"
+                    required
+                    className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm outline-none transition-all focus:border-zinc-300 focus:ring-1 focus:ring-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Role
+                  </label>
+                  <select
+                    value={memberRole}
+                    onChange={(e) => setMemberRole(e.target.value)}
+                    className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm outline-none transition-all focus:border-zinc-300 focus:ring-1 focus:ring-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
+                  >
+                    <option value="editor">Editor</option>
+                    <option value="watcher">Watcher</option>
+                  </select>
+                </div>
+                {memberError && (
+                  <p className="text-xs font-medium text-red-600 dark:text-red-400">
+                    {memberError}
+                  </p>
+                )}
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddMemberOpen(false)}
+                    className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingMember}
+                    className="flex items-center gap-2 rounded-xl bg-zinc-950 px-5 py-2 text-sm font-medium text-white transition-all hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
+                  >
+                    {isSubmittingMember ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Adding...</span>
+                      </>
+                    ) : (
+                      <span>Add Member</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
           </div>
         )}
+      </AnimatePresence>
 
         <div className="mt-8">
           <TodoStats stats={stats} />
@@ -292,7 +335,8 @@ export function WorkspaceDetailPage({ workspaceId }) {
             </div>
           ) : (
             <TodoList
-              tasks={filteredTasks}
+              tasks={pagedTasks}
+              startIndex={startIndex}
               onToggle={handleToggleTask}
               onDelete={handleDeleteTask}
               onUpdate={handleUpdateTask}
@@ -309,6 +353,30 @@ export function WorkspaceDetailPage({ workspaceId }) {
                   : 'Nothing needs your attention.'
               }
             />
+          )}
+
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between rounded-xl border border-zinc-200 bg-white/90 px-4 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                Prev
+              </button>
+              <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                Next
+              </button>
+            </div>
           )}
         </div>
       </section>

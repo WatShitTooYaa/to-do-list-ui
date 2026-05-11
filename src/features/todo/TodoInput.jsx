@@ -1,16 +1,11 @@
 import { CalendarDays, Check, CirclePlus, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 
-const priorityOptions = [
-    { value: 'low', label: 'Low' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'high', label: 'High' },
-]
+
 
 export function TodoInput({ onAdd }) {
     const [value, setValue] = useState('')
     const [deadline, setDeadline] = useState('')
-    const [priority, setPriority] = useState('medium')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const today = new Date().toISOString().split('T')[0]
 
@@ -26,10 +21,9 @@ export function TodoInput({ onAdd }) {
 
         try {
             await new Promise((resolve) => setTimeout(resolve, 350))
-            await onAdd({ title, deadline, priority })
+            await onAdd({ title, deadline })
             setValue('')
             setDeadline('')
-            setPriority('medium')
         } finally {
             setIsSubmitting(false)
         }
@@ -57,18 +51,7 @@ export function TodoInput({ onAdd }) {
                     className="h-full w-full bg-transparent text-[14px] font-normal text-zinc-700 focus:outline-none dark:text-zinc-200"
                 />
             </label>
-            <select
-                value={priority}
-                onChange={(event) => setPriority(event.target.value)}
-                aria-label="Task priority"
-                className="h-12 rounded-xl border border-zinc-200/80 bg-white/80 px-3 text-sm font-medium text-zinc-700 shadow-sm shadow-zinc-200/60 outline-none transition-all duration-200 focus:border-zinc-300 focus:bg-white focus:ring-1 focus:ring-zinc-300 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-200 dark:shadow-none dark:focus:border-zinc-700 dark:focus:bg-zinc-900 dark:focus:ring-zinc-700 sm:w-32"
-            >
-                {priorityOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
-                    </option>
-                ))}
-            </select>
+
             <button
                 type="submit"
                 aria-label="Add task"
