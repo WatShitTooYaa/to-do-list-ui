@@ -1,4 +1,5 @@
-import { CalendarDays, Clock3, Search, SlidersHorizontal, ArrowLeft } from 'lucide-react'
+import { CalendarDays, Clock3, Search, SlidersHorizontal, ArrowLeft, UserPlus, X, Loader2 } from 'lucide-react'
+import { addWorkspaceMember } from '../services/workspaceService'
 import { useEffect, useMemo, useState } from 'react'
 import { TodoInput } from '../features/todo/TodoInput'
 import { TodoList } from '../features/todo/TodoList'
@@ -54,6 +55,13 @@ export function WorkspaceDetailPage({ workspaceId }) {
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortByDeadline, setSortByDeadline] = useState(true)
 
+  // Add Member states
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
+  const [memberEmail, setMemberEmail] = useState('')
+  const [memberRole, setMemberRole] = useState('watcher')
+  const [isSubmittingMember, setIsSubmittingMember] = useState(false)
+  const [memberError, setMemberError] = useState('')
+
   useEffect(() => {
     if (workspaceId) {
       loadTasks(workspaceId)
@@ -89,6 +97,24 @@ export function WorkspaceDetailPage({ workspaceId }) {
   const handleDeleteTask = (taskId) => deleteTask(taskId, workspaceId)
   const handleUpdateTask = (taskId, updates) => updateTask(taskId, updates, workspaceId)
 
+  const handleAddMember = async (e) => {
+    e.preventDefault()
+    if (!memberEmail.trim()) return
+
+    setIsSubmittingMember(true)
+    setMemberError('')
+    try {
+      await addWorkspaceMember(workspaceId, { email: memberEmail, role: memberRole })
+      setMemberEmail('')
+      setIsAddMemberOpen(false)
+      // Optional: show success toast/alert
+    } catch (err) {
+      setMemberError(err.message || 'Failed to add member')
+    } finally {
+      setIsSubmittingMember(false)
+    }
+  }
+
   return (
     <main className="min-h-[calc(100vh-64px)] px-4 py-10 sm:py-14">
       <section className="mx-auto max-w-2xl">
@@ -110,10 +136,89 @@ export function WorkspaceDetailPage({ workspaceId }) {
             </h1>
           </div>
 
-          <div className="w-fit rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm font-medium text-zinc-500 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:shadow-none">
-            {stats.open} open
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsAddMemberOpen(true)}
+              className="flex h-9 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              <UserPlus size={15} />
+              <span>Add Member</span>
+            </button>
+            <div className="w-fit rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm font-medium text-zinc-500 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:shadow-none">
+              {stats.open} open
+            </div>
           </div>
         </header>
+
+        {isAddMemberOpen && (
+          <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">Add Workspace Member</h2>
+              <button
+                onClick={() => setIsAddMemberOpen(false)}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleAddMember} className="grid gap-4">
+              <div className="grid gap-1.5">
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  User Email
+                </label>
+                <input
+                  type="email"
+                  value={memberEmail}
+                  onChange={(e) => setMemberEmail(e.target.value)}
+                  placeholder="user@example.com"
+                  required
+                  className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm outline-none transition-all focus:border-zinc-300 focus:ring-1 focus:ring-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Role
+                </label>
+                <select
+                  value={memberRole}
+                  onChange={(e) => setMemberRole(e.target.value)}
+                  className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm outline-none transition-all focus:border-zinc-300 focus:ring-1 focus:ring-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
+                >
+                  <option value="editor">Editor</option>
+                  <option value="watcher">Watcher</option>
+                </select>
+              </div>
+              {memberError && (
+                <p className="text-xs font-medium text-red-600 dark:text-red-400">
+                  {memberError}
+                </p>
+              )}
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddMemberOpen(false)}
+                  className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingMember}
+                  className="flex items-center gap-2 rounded-xl bg-zinc-950 px-5 py-2 text-sm font-medium text-white transition-all hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
+                >
+                  {isSubmittingMember ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    <span>Add Member</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         <div className="mt-8">
           <TodoStats stats={stats} />
