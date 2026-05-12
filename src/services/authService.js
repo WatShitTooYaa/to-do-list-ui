@@ -5,6 +5,7 @@ const extractUser = (data, fallback = {}) => {
 
   if (user && typeof user === 'object' && !extractAccessToken(user)) {
     return {
+      id: user.id ?? user.userId ?? user._id ?? null,
       name: user.name ?? user.username ?? fallback.name ?? fallback.email,
       username: user.username ?? user.name ?? fallback.name,
       email: user.email ?? fallback.email,
@@ -14,6 +15,7 @@ const extractUser = (data, fallback = {}) => {
 
   if (fallback.email || fallback.name) {
     return {
+      id: null,
       name: fallback.name ?? fallback.email,
       username: fallback.name,
       email: fallback.email,

@@ -29,3 +29,10 @@ export const addWorkspaceMember = async (workspaceId, { email, role }) => {
     })
     return data
 }
+
+export const getWorkspaceMembers = async (workspaceId) => {
+    const data = await request(`/api/v1/workspaces/${workspaceId}/members`, {
+        credentials: 'include',
+    })
+    return data?.data ?? data
+}

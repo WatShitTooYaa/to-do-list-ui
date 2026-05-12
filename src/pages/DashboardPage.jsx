@@ -24,7 +24,22 @@ export function DashboardPage({ onNavigate }) {
   }
 
   useEffect(() => {
-    loadWorkspaces()
+    let mounted = true
+    const fetchData = async () => {
+      if (!mounted) return
+      setIsLoading(true)
+      setError('')
+      try {
+        const data = await getWorkspaces()
+        if (mounted) setWorkspaces(data)
+      } catch (err) {
+        if (mounted) setError(err.message || 'Failed to load workspaces')
+      } finally {
+        if (mounted) setIsLoading(false)
+      }
+    }
+    fetchData()
+    return () => { mounted = false }
   }, [])
 
   const handleCreateWorkspace = async (e) => {

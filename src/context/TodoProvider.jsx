@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { TodoContext } from './todoContextValue'
 import { useAuth } from './useAuth'
 import {
@@ -9,7 +9,7 @@ import {
 } from '../services/taskService'
 
 export function TodoProvider({ children }) {
-    const { user, isAuthReady } = useAuth()
+    const { user } = useAuth()
     const [tasks, setTasks] = useState([])
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
@@ -38,18 +38,17 @@ export function TodoProvider({ children }) {
     //     }
     // }, [isAuthReady, loadTasks])
 
-    const addTask = useCallback(async ({ title, deadline = '', priority = 'medium', workspaceId }) => {
+    const addTask = useCallback(async ({ title, deadline = '', workspaceId }) => {
         setError('')
 
         try {
-            const createdTask = await createTask({ title, deadline, priority, workspaceId })
+            const createdTask = await createTask({ title, deadline, workspaceId })
 
             if (createdTask) {
                 const optimisticTask = {
                     ...createdTask,
                     title: createdTask.title || title,
                     deadline: createdTask.deadline || deadline,
-                    priority: createdTask.priority || priority,
                     completed: false,
                     workspaceId: createdTask.workspaceId || workspaceId,
                 }

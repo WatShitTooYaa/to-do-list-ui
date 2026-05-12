@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ListChecks } from 'lucide-react'
 import { TodoItem } from './TodoItem'
 
-export function TodoList({ tasks, onToggle, onDelete, onUpdate, emptyTitle, emptyDescription }) {
+export function TodoList({ tasks, onToggle, onDelete, onUpdate, emptyTitle, emptyDescription, startIndex = 0 }) {
     return (
         <section className="rounded-2xl border border-zinc-200 bg-white/90 p-3 shadow-md shadow-zinc-200/70 transition-colors dark:border-zinc-800 dark:bg-zinc-900/90 dark:shadow-none sm:p-4">
             <AnimatePresence mode="popLayout">
@@ -10,8 +10,9 @@ export function TodoList({ tasks, onToggle, onDelete, onUpdate, emptyTitle, empt
                     <motion.ul layout className="space-y-1">
                         {tasks.map((task, index) => (
                             <TodoItem
-                                key={task.id ?? task._id ?? `${task.title}-${task.deadline}-${task.priority}-${index}`}
+                                key={task.id ?? task._id ?? `${task.title}-${task.deadline}-${index}`}
                                 task={task}
+                                index={startIndex + index}
                                 onToggle={onToggle}
                                 onDelete={onDelete}
                                 onUpdate={onUpdate}
