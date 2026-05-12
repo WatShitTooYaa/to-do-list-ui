@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { TodoContext } from './todoContextValue'
 import { useAuth } from './useAuth'
 import {
@@ -9,7 +9,7 @@ import {
 } from '../services/taskService'
 
 export function TodoProvider({ children }) {
-    const { user, isAuthReady } = useAuth()
+    const { user } = useAuth()
     const [tasks, setTasks] = useState([])
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')

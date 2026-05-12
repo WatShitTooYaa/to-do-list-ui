@@ -74,7 +74,7 @@ export const normalizeTask = (task) => {
         title: pickTaskTitle(task),
         completed: pickTaskCompleted(task),
         deadline: toDateInputValue(task.deadline),
-        creatorName: task?.user?.name || task?.creatorName || 'Unknown',
+        creatorName: task?.user?.name || task?.creatorName || task?.createdBy || task?.username || 'Unknown',
     }
 }
 
