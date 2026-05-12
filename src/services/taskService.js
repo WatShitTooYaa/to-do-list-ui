@@ -25,6 +25,13 @@ const toDateInputValue = (deadline) => {
         return deadline
     }
 
+    if (typeof deadline === 'string') {
+        const match = deadline.match(/^(\d{4}-\d{2}-\d{2})/)
+        if (match) {
+            return match[1]
+        }
+    }
+
     const date = new Date(deadline)
 
     if (Number.isNaN(date.getTime())) {
@@ -39,7 +46,7 @@ const toApiDeadline = (deadline) => {
         return null
     }
 
-    return new Date(`${deadline}T23:59:59`).toISOString()
+    return `${deadline}T23:59:59.000Z`
 }
 
 const unwrapTasks = (data) => {

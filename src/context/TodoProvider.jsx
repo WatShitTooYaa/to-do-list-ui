@@ -32,33 +32,25 @@ export function TodoProvider({ children }) {
         }
     }, [user])
 
-    // useEffect(() => {
-    //     if (isAuthReady) {
-    //         Promise.resolve().then(loadTasks)
-    //     }
-    // }, [isAuthReady, loadTasks])
-
     const addTask = useCallback(async ({ title, deadline = '', workspaceId }) => {
         setError('')
 
         try {
             const createdTask = await createTask({ title, deadline, workspaceId })
 
-            if (createdTask) {
-                const optimisticTask = {
+            if (createdTask?.id) {
+                const nextTask = {
                     ...createdTask,
                     title: createdTask.title || title,
                     deadline: createdTask.deadline || deadline,
-                    completed: false,
+                    completed: createdTask.completed ?? false,
                     workspaceId: createdTask.workspaceId || workspaceId,
                 }
 
-                if (optimisticTask.id) {
-                    setTasks((currentTasks) => [optimisticTask, ...currentTasks])
-                }
+                setTasks((currentTasks) => [nextTask, ...currentTasks])
+            } else {
+                await loadTasks(workspaceId, false)
             }
-
-            await loadTasks(workspaceId, false)
         } catch (currentError) {
             setError(currentError.message)
             throw currentError
@@ -73,11 +65,10 @@ export function TodoProvider({ children }) {
             setTasks((currentTasks) =>
                 currentTasks.filter((task) => task.id !== taskId),
             )
-            await loadTasks(workspaceId, false)
         } catch (currentError) {
             setError(currentError.message)
         }
-    }, [loadTasks])
+    }, [])
 
     const updateTask = useCallback(async (taskId, updates, workspaceId) => {
         setError('')
@@ -92,11 +83,10 @@ export function TodoProvider({ children }) {
                         : task,
                 ),
             )
-            await loadTasks(workspaceId, false)
         } catch (currentError) {
             setError(currentError.message)
         }
-    }, [loadTasks])
+    }, [])
 
     const toggleTask = useCallback(
         async (taskId, workspaceId) => {
