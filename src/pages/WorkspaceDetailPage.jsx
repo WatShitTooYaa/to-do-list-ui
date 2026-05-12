@@ -7,6 +7,7 @@ import { TodoList } from '../features/todo/TodoList'
 import { TodoStats } from '../features/todo/TodoStats'
 import { useTodos } from '../context/useTodos'
 import { useAuth } from '../context/useAuth'
+import { useWorkspaces } from '../context/useWorkspaces'
 import { formatToday } from '../utils/date'
 
 const TASKS_PER_PAGE = 10
@@ -17,32 +18,21 @@ const statusFilters = [
     { value: 'completed', label: 'Completed' },
 ]
 
-const getDeadlineScore = (task) => {
-    if (!task.deadline) {
-        return Number.POSITIVE_INFINITY
-    }
-
-    const deadlineDate = new Date(`${task.deadline}T00:00:00`)
-
-    if (Number.isNaN(deadlineDate.getTime())) {
-        return Number.POSITIVE_INFINITY
-    }
-
-    return deadlineDate.getTime()
-}
-
 const compareByDeadline = (leftTask, rightTask) => {
-    const leftScore = getDeadlineScore(leftTask)
-    const rightScore = getDeadlineScore(rightTask)
+    const leftDeadline = leftTask.deadline || ''
+    const rightDeadline = rightTask.deadline || ''
 
-    if (leftScore !== rightScore) {
-        return leftScore - rightScore
+    if (leftDeadline && !rightDeadline) return -1
+    if (!leftDeadline && rightDeadline) return 1
+
+    if (leftDeadline !== rightDeadline) {
+        return leftDeadline.localeCompare(rightDeadline)
     }
 
     return leftTask.title.localeCompare(rightTask.title)
 }
 
-export function WorkspaceDetailPage({ workspaceId }) {
+export function WorkspaceDetailPage({ workspaceId, onNavigate }) {
     const {
         tasks,
         stats,
@@ -55,6 +45,11 @@ export function WorkspaceDetailPage({ workspaceId }) {
         loadTasks,
     } = useTodos()
     const { user } = useAuth()
+    const { workspaces } = useWorkspaces()
+    const workspace = useMemo(
+        () => workspaces.find((item) => String(item.id) === String(workspaceId)),
+        [workspaces, workspaceId],
+    )
 
     const [searchQuery, setSearchQuery] = useState('')
     const [statusFilter, setStatusFilter] = useState('all')
@@ -79,12 +74,11 @@ export function WorkspaceDetailPage({ workspaceId }) {
     const userRole = currentMember?.role ?? null
 
     useEffect(() => {
-        if (workspaceId) {
-            loadTasks(workspaceId)
-            getWorkspaceMembers(workspaceId)
-                .then(setWorkspaceMembers)
-                .catch(() => { })
-        }
+        if (!workspaceId) return
+        loadTasks(workspaceId)
+        getWorkspaceMembers(workspaceId)
+            .then(setWorkspaceMembers)
+            .catch(() => { })
     }, [workspaceId, loadTasks])
 
     const filteredTasks = useMemo(() => {
@@ -109,6 +103,8 @@ export function WorkspaceDetailPage({ workspaceId }) {
         return [...nextTasks].sort(compareByDeadline)
     }, [searchQuery, sortByDeadline, statusFilter, tasks])
 
+    if (!workspaceId) return null
+
     const totalPages = Math.ceil(filteredTasks.length / TASKS_PER_PAGE)
     const validCurrentPage = Math.min(currentPage, Math.max(1, totalPages))
     const startIndex = (validCurrentPage - 1) * TASKS_PER_PAGE
@@ -130,7 +126,12 @@ export function WorkspaceDetailPage({ workspaceId }) {
             await addWorkspaceMember(workspaceId, { email: memberEmail, role: memberRole })
             setMemberEmail('')
             setIsAddMemberOpen(false)
-            // Optional: show success toast/alert
+            try {
+                const nextMembers = await getWorkspaceMembers(workspaceId)
+                setWorkspaceMembers(nextMembers)
+            } catch {
+                // keep dialog closed even if refresh fails; list will update on next mount
+            }
         } catch (err) {
             setMemberError(err.message || 'Failed to add member')
         } finally {
@@ -144,7 +145,9 @@ export function WorkspaceDetailPage({ workspaceId }) {
                 <header className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <button
-                            onClick={() => window.history.back()}
+                            onClick={() =>
+                                onNavigate ? onNavigate('dashboard') : window.history.back()
+                            }
                             className="mb-4 flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                         >
                             <ArrowLeft size={16} />
@@ -155,7 +158,7 @@ export function WorkspaceDetailPage({ workspaceId }) {
                             <span>Today, {formatToday()}</span>
                         </div>
                         <h1 className="text-3xl font-medium tracking-normal text-zinc-950 dark:text-zinc-50 sm:text-4xl">
-                            {workspaceMembers?.name || 'Workspace Tasks'}
+                            {workspace?.name || 'Workspace Tasks'}
                         </h1>
                     </div>
 

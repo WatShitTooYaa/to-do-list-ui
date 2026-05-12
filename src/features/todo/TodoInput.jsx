@@ -20,7 +20,6 @@ export function TodoInput({ onAdd }) {
         setIsSubmitting(true)
 
         try {
-            await new Promise((resolve) => setTimeout(resolve, 350))
             await onAdd({ title, deadline })
             setValue('')
             setDeadline('')

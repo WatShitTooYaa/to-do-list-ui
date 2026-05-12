@@ -1,46 +1,14 @@
 import { CalendarDays, Plus, Layout, ArrowRight } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { getWorkspaces, createWorkspace } from '../services/workspaceService'
+import { useState } from 'react'
+import { createWorkspace } from '../services/workspaceService'
 import { formatToday } from '../utils/date'
+import { useWorkspaces } from '../context/useWorkspaces'
 
 export function DashboardPage({ onNavigate }) {
-  const [workspaces, setWorkspaces] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
+  const { workspaces, isLoading, error: workspaceError, reload } = useWorkspaces()
   const [error, setError] = useState('')
   const [newWorkspaceName, setNewWorkspaceName] = useState('')
   const [isCreating, setIsCreating] = useState(false)
-
-  const loadWorkspaces = async () => {
-    setIsLoading(true)
-    setError('')
-    try {
-      const data = await getWorkspaces()
-      setWorkspaces(data)
-    } catch (err) {
-      setError(err.message || 'Failed to load workspaces')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    let mounted = true
-    const fetchData = async () => {
-      if (!mounted) return
-      setIsLoading(true)
-      setError('')
-      try {
-        const data = await getWorkspaces()
-        if (mounted) setWorkspaces(data)
-      } catch (err) {
-        if (mounted) setError(err.message || 'Failed to load workspaces')
-      } finally {
-        if (mounted) setIsLoading(false)
-      }
-    }
-    fetchData()
-    return () => { mounted = false }
-  }, [])
 
   const handleCreateWorkspace = async (e) => {
     e.preventDefault()
@@ -51,7 +19,7 @@ export function DashboardPage({ onNavigate }) {
     try {
       await createWorkspace(newWorkspaceName.trim())
       setNewWorkspaceName('')
-      await loadWorkspaces()
+      reload()
     } catch (err) {
       setError(err.message || 'Failed to create workspace')
     } finally {
@@ -93,9 +61,9 @@ export function DashboardPage({ onNavigate }) {
           </button>
         </form>
 
-        {error && (
+        {(error || workspaceError) && (
           <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:border-red-900 dark:bg-red-500/15 dark:text-red-300">
-            {error}
+            {error || workspaceError}
           </div>
         )}
 

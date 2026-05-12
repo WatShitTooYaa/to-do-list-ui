@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AuthContext } from './authContextValue'
 import {
   login as loginService,
@@ -37,25 +37,25 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  const login = async (credentials) => {
+  const login = useCallback(async (credentials) => {
     setAuthError('')
     const nextUser = await loginService(credentials)
     setUser(nextUser)
     return nextUser
-  }
+  }, [])
 
-  const register = async (payload) => {
+  const register = useCallback(async (payload) => {
     setAuthError('')
     const nextUser = await registerService(payload)
     setUser(nextUser)
     return nextUser
-  }
+  }, [])
 
-  const updateProfile = (profile) => {
+  const updateProfile = useCallback((profile) => {
     setUser((currentUser) => ({ ...currentUser, ...profile }))
-  }
+  }, [])
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     setAuthError('')
 
     try {
@@ -65,7 +65,7 @@ export function AuthProvider({ children }) {
     } finally {
       setUser(null)
     }
-  }
+  }, [])
 
   const value = useMemo(
     () => ({
@@ -78,7 +78,7 @@ export function AuthProvider({ children }) {
       updateProfile,
       logout,
     }),
-    [authError, isAuthReady, user],
+    [authError, isAuthReady, user, login, register, updateProfile, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

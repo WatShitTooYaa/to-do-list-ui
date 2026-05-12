@@ -1,5 +1,14 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
+const listeners = new Set()
+export const onAuthEvent = (listener) => {
+  listeners.add(listener)
+  return () => listeners.delete(listener)
+}
+const emitAuthEvent = (type) => {
+  listeners.forEach((listener) => listener(type))
+}
+
 let accessToken = null
 let refreshPromise = null
 
@@ -99,6 +108,16 @@ export const request = async (path, options = {}) => {
     const data = await parseResponse(response)
 
     if (!response.ok) {
+      const isAuthPath = path.startsWith('/api/auth/')
+
+      if (response.status === 401 && !isAuthPath && auth) {
+        emitAuthEvent('unauthorized')
+      } else if (response.status === 403 && auth) {
+        emitAuthEvent('forbidden')
+      } else if (response.status === 404 && auth && path.includes('/api/v1/workspaces/')) {
+        emitAuthEvent('notFound')
+      }
+
       throw new ApiError(
         getErrorMessage(data, `Request failed with status ${response.status}`, response.status),
         response.status,
