@@ -1,170 +1,301 @@
-# Issue: Proteksi Route Client-Side & Error Handling Terpusat
+# Issue: Gunakan Cookie `has_session` untuk Mencegah Refresh Request Sia-Sia
 
 ## Konteks
 
-Saat ini aplikasi melakukan request ke server meskipun user seharusnya tidak punya akses ke sebuah route. Contoh:
+Backend sudah membuat cookie `has_session` sebagai flag penanda bahwa browser kemungkinan punya refresh session aktif.
 
-- User belum login membuka `/workspace/123` — sudah dicegah mount, tapi redirect terjadi lewat `useEffect` sehingga tombol back kembali ke halaman terproteksi.
-- User login tapi bukan member workspace `123` membuka `/workspace/123` — `WorkspaceDetailPage` tetap mount, `getWorkspaceMembers` + `loadTasks` tetap dipanggil, server balas 403/404.
-- Route asing (mis. `/qwerty`) jatuh ke landing page, bukan ke halaman Not Found.
+Saat ini frontend masih memanggil endpoint refresh session walaupun user guest dan tidak punya refresh token cookie. Akibatnya:
 
-Tujuan issue ini: hentikan request "nekat" ke server, beri UX yang jelas kalau user salah route, dan pusatkan penanganan error HTTP.
+- Request `POST /api/auth/refresh` terjadi setiap app pertama kali dibuka.
+- Guest user mendapat response `401` yang sebenarnya normal, tapi mengotori Network tab dan log backend.
+- Backend menerima request yang tidak perlu.
+
+Tujuan task ini: **frontend hanya memanggil refresh session jika cookie `has_session` tersedia**.
+
+## Prinsip Penting
+
+- Jangan baca cookie refresh token langsung. Refresh token seharusnya `HttpOnly`, jadi tidak bisa dan tidak boleh dibaca JavaScript.
+- Cookie `has_session` hanya flag, bukan sumber kebenaran auth.
+- Jika `has_session` ada, frontend boleh mencoba refresh.
+- Jika `has_session` tidak ada, frontend harus skip refresh dan anggap user guest.
+- Jika refresh gagal, frontend harus bersihkan access token lokal dan lanjut sebagai guest.
+
+---
 
 ## Scope
 
-Tiga pekerjaan, boleh dikerjakan berurutan atau paralel:
+Kerjakan hanya bagian frontend.
 
-1. Tambah `NotFoundPage` + fallback routing.
-2. Simpan daftar workspace user di context supaya bisa pre-check akses sebelum mount `WorkspaceDetailPage`.
-3. Pusatkan handling `401` / `403` / `404` di `src/services/api.js` sebagai jaring pengaman.
-
-Aturan umum:
-
-- Jangan ubah gaya kode yang sudah ada (4 spasi indent, tanpa semicolon sesuai file existing).
-- Jangan menambah library baru. Pakai yang sudah ada (`react`, `lucide-react`, dll).
-- Jangan menulis test baru. Repo ini belum punya test runner.
-- Jangan refactor di luar scope. Kalau ketemu bug lain, catat di PR description, jangan fix.
-
----
-
-## Task 1 — NotFoundPage + Fallback Routing
-
-### File yang disentuh
-
-- `src/pages/NotFoundPage.jsx` (baru)
-- `src/App.jsx`
-
-### Langkah
-
-1. Buat `src/pages/NotFoundPage.jsx`. Komponen functional, menerima prop `onNavigate`. Tampilkan:
-   - Judul `404`.
-   - Subjudul `Halaman tidak ditemukan`.
-   - Tombol `Kembali ke beranda` yang memanggil `onNavigate('landing')`.
-   - Gunakan class tailwind yang konsisten dengan `LandingPage.jsx` / `LoginPage.jsx` (lihat padding, warna zinc, dark mode). Tidak perlu animasi.
-2. Di `src/App.jsx`:
-   - Tambah `'notFound': '/not-found'` di object `pagePaths`.
-   - Di `getPageFromPath`, ganti baris terakhir `return { page: 'landing' }` menjadi `return { page: 'notFound' }`. Path `/` tetap dipetakan eksplisit ke `landing`.
-   - Import `NotFoundPage` dan tambahkan `case 'notFound': return <NotFoundPage onNavigate={handleNavigate} />` di switch `page` useMemo.
-   - Pastikan `AppShell` tetap membungkus `NotFoundPage` supaya header/nav konsisten.
-
-### Definition of Done
-
-- Membuka `/qwerty` menampilkan halaman 404, bukan landing.
-- Tombol `Kembali ke beranda` mengganti URL ke `/` dan merender landing.
-- Tidak ada warning di console.
-
----
-
-## Task 2 — Workspace List di Context untuk Pre-Check Akses
-
-### Tujuan
-
-Sebelum `WorkspaceDetailPage` mount, kita sudah tahu daftar workspace milik user. Kalau `id` di URL tidak ada di daftar, redirect ke `notFound`. Dengan ini `getWorkspaceMembers` + `loadTasks` tidak pernah dipanggil untuk workspace yang bukan milik user.
-
-### File yang disentuh
-
-- `src/context/workspaceContextValue.js` (baru)
-- `src/context/WorkspaceProvider.jsx` (baru)
-- `src/context/useWorkspaces.js` (baru)
-- `src/App.jsx`
-- `src/pages/DashboardPage.jsx` (ganti fetch lokal → pakai context)
-- `src/pages/WorkspaceDetailPage.jsx` (tambah guard)
-
-### Langkah
-
-1. Buat context skeleton mengikuti pola `AuthContext`:
-   - `workspaceContextValue.js`: `export const WorkspaceContext = createContext(null)`.
-   - `useWorkspaces.js`: hook yang throw kalau dipakai di luar provider (lihat `useAuth.js` sebagai referensi).
-2. `WorkspaceProvider.jsx`:
-   - State: `workspaces` (array), `isLoading` (bool), `error` (string), `isLoaded` (bool, default `false`).
-   - Dependensi: `const { user, isAuthReady } = useAuth()`.
-   - `useEffect`: saat `isAuthReady && user`, panggil `getWorkspaces()` dari `services/workspaceService.js`, isi `workspaces`, set `isLoaded = true`. Saat `!user`, reset state ke default.
-   - Expose `reload()` untuk dipanggil setelah `createWorkspace`.
-   - Expose helper `hasAccess(workspaceId)` → `workspaces.some((w) => String(w.id) === String(workspaceId))`.
-   - Value di-`useMemo` dengan dependency yang benar.
-3. Di `src/App.jsx`, bungkus tree: `AuthProvider > ThemeProvider > WorkspaceProvider > TodoProvider`. `WorkspaceProvider` harus di dalam `AuthProvider` karena butuh `user`.
-4. Tambah guard di `App.jsx` sebelum render `WorkspaceDetailPage`:
-   - Di `AppContent`, pakai `useWorkspaces()` untuk ambil `isLoaded` dan `hasAccess`.
-   - Di case `'workspace'` pada switch `page`:
-     - Kalau `!user` → tetap render `LoginPage` (sudah ada).
-     - Kalau `user && !isLoaded` → render loader kecil (reuse pola `<Loader2 />` yang sudah ada).
-     - Kalau `user && isLoaded && !hasAccess(pageParams?.id)` → render `NotFoundPage` dan panggil `handleAuthNavigate('notFound')` satu kali (pakai `useEffect` dengan dependency `[currentPage, pageParams?.id, isLoaded]`). Penting: URL harus di-replace pakai `history.replaceState`, bukan `pushState`, supaya back tidak balik ke route tidak valid. Tambah helper `handleAuthReplace(page)` kalau perlu.
-     - Kalau lolos semua check → render `WorkspaceDetailPage` seperti sekarang.
-5. `DashboardPage.jsx`: ganti fetch lokal workspace dengan `useWorkspaces()`. Tombol "create workspace" setelah sukses memanggil `reload()` dari context, bukan fetch ulang manual.
-6. `WorkspaceDetailPage.jsx`: sebagai pertahanan terakhir, di awal komponen tambahkan `if (!workspaceId) return null`. Ini mencegah `useEffect` fetch kalau props belum siap.
-
-### Definition of Done
-
-- Membuka `/workspace/<id-tidak-valid>` tidak memicu request `GET /api/v1/workspaces/<id>/members` ataupun `GET /api/v1/workspaces/<id>/tasks`. Cek lewat Network tab.
-- User langsung diarahkan ke halaman Not Found dan URL berubah ke `/not-found`.
-- Dashboard tetap menampilkan daftar workspace seperti sebelumnya.
-- Buat workspace baru → langsung muncul di dashboard tanpa reload halaman.
-
----
-
-## Task 3 — Error Handling Terpusat di `api.js`
-
-### Tujuan
-
-Jaring pengaman kalau guard client lolos. Server balas 401 → force logout + redirect `/login`. Server balas 403/404 untuk resource yang diminta → redirect `/not-found`. Tidak mengubah perilaku `request` untuk error lain.
-
-### File yang disentuh
+File yang kemungkinan disentuh:
 
 - `src/services/api.js`
-- `src/App.jsx` (pasang listener redirect)
+- `src/services/authService.js`
+- `src/context/AuthProvider.jsx`
 
-### Langkah
+Jangan ubah:
 
-1. Di `src/services/api.js`, tambahkan event bus sederhana (tanpa library):
-   ```js
-   const listeners = new Set()
-   export const onAuthEvent = (listener) => {
-     listeners.add(listener)
-     return () => listeners.delete(listener)
-   }
-   const emitAuthEvent = (type) => {
-     listeners.forEach((listener) => listener(type))
-   }
-   ```
-2. Di blok `if (!response.ok)` dalam `request`:
-   - Kalau `response.status === 401` dan retry sudah gagal → panggil `emitAuthEvent('unauthorized')` sebelum throw.
-   - Kalau `response.status === 403` → `emitAuthEvent('forbidden')`.
-   - Kalau `response.status === 404` dan path mengandung `/api/v1/workspaces/` (resource akses) → `emitAuthEvent('notFound')`.
-   - Tetap throw `ApiError` seperti sekarang. Jangan menelan error.
-3. Di `AppContent` (`src/App.jsx`):
-   - `useEffect` sekali pakai, subscribe ke `onAuthEvent`:
-     - `'unauthorized'` → panggil `logout()` dari `useAuth` (tambahkan ke destructuring) lalu `handleAuthNavigate('login')` via `history.replaceState`.
-     - `'forbidden'` atau `'notFound'` → `handleAuthNavigate('notFound')` via `history.replaceState`.
-   - Unsubscribe di cleanup.
-4. Perhatian: interceptor ini jangan memicu loop. Refresh token (`/api/auth/refresh`) sudah pakai `retry: false`; jangan emit `'unauthorized'` untuk endpoint refresh. Cara paling simpel: skip emit kalau `path` diawali `/api/auth/`.
-
-### Definition of Done
-
-- Simulasi token expired: hapus `accessToken` di memory, buka halaman terproteksi → otomatis logout + pindah ke `/login` tanpa harus klik apa-apa.
-- Simulasi 403 dari backend (mis. matikan akses di DB) → user dipindah ke `/not-found`.
-- Tidak ada infinite redirect / request loop (cek Network tab).
+- Routing.
+- UI halaman login/register.
+- Payload login/logout.
+- Nama cookie dari backend, kecuali backend memang memakai nama berbeda.
 
 ---
 
-## Catatan Implementasi (Semua Task)
+## Task 1 — Tambah Helper untuk Membaca Cookie `has_session`
 
-- Gunakan `history.replaceState` untuk redirect otomatis (bukan `pushState`) supaya tombol Back tidak mengembalikan user ke route yang tidak valid.
-- Semua redirect dilakukan di layer `App.jsx`. Page-level component hanya bertugas render + guard defensif, bukan navigasi.
-- `useEffect` untuk redirect harus punya dependency yang tepat. Hindari `Promise.resolve().then(...)` kecuali benar-benar perlu — lebih baik langsung panggil fungsinya.
-- Saat menambah state di context, bungkus value dengan `useMemo` dan list semua dependency eksplisit. Ikuti pola `AuthProvider.jsx`.
-- Jangan ubah kontrak response `workspaceService.js`. Kalau butuh field baru, tambahkan di service, bukan inline di component.
+### File
 
-## Urutan Review
+`src/services/api.js`
 
-1. Task 1 lebih dulu (kecil, tidak bergantung task lain).
-2. Task 2 butuh Task 1 (butuh `notFound` route).
-3. Task 3 butuh Task 1 & 2 (redirect target harus sudah ada).
+### Instruksi
 
-Boleh buat 3 PR terpisah, atau 1 PR per task, terserah. Jangan gabung tiga-tiganya dalam satu commit besar.
+Tambahkan helper kecil untuk membaca cookie browser.
+
+Nama cookie default: `has_session`.
+
+Contoh implementasi:
+
+```js
+const SESSION_COOKIE_NAME = 'has_session'
+
+export const hasSessionCookie = () => {
+  if (typeof document === 'undefined') {
+    return false
+  }
+
+  return document.cookie
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .some((cookie) => cookie.startsWith(`${SESSION_COOKIE_NAME}=`))
+}
+```
+
+Catatan:
+
+- Jangan parse value cookie karena value tidak penting.
+- Cukup cek cookie ada atau tidak.
+- Jangan simpan hasilnya di module variable karena cookie bisa berubah setelah login/logout.
+- Jangan gunakan `localStorage` untuk task ini karena backend sudah menyediakan cookie flag.
+
+### Definition of Done
+
+- `hasSessionCookie()` return `true` saat `document.cookie` mengandung `has_session=...`.
+- `hasSessionCookie()` return `false` saat cookie tidak ada.
+- Tidak error saat `document` tidak tersedia.
+
+---
+
+## Task 2 — Skip `refreshAccessToken` Jika Tidak Ada `has_session`
+
+### File
+
+`src/services/api.js`
+
+### Instruksi
+
+Update fungsi `refreshAccessToken`.
+
+Sebelum membuat request ke `/api/auth/refresh`, cek `hasSessionCookie()`.
+
+Expected behavior:
+
+```js
+export const refreshAccessToken = async () => {
+  if (!hasSessionCookie()) {
+    setAccessToken(null)
+    return false
+  }
+
+  // existing refreshPromise logic tetap di bawah sini
+}
+```
+
+Pastikan logic `refreshPromise` yang sudah ada tetap dipakai supaya request refresh tidak dobel saat banyak request terkena `401` bersamaan.
+
+Jangan hapus:
+
+- `refreshPromise`
+- `setAccessToken(nextToken)` saat refresh sukses
+- `setAccessToken(null)` saat refresh gagal
+
+### Definition of Done
+
+- Jika cookie `has_session` tidak ada, `refreshAccessToken()` langsung return `false` tanpa request network.
+- Jika cookie `has_session` ada, flow refresh lama tetap berjalan.
+- Multiple request `401` tetap hanya menghasilkan satu refresh request karena `refreshPromise` masih bekerja.
+
+---
+
+## Task 3 — Skip `refreshSession` Saat App Pertama Dibuka oleh Guest
+
+### File
+
+`src/context/AuthProvider.jsx`
+
+### Instruksi
+
+Saat `AuthProvider` mount, app sekarang memanggil `refreshSession()` untuk mengecek apakah user masih login.
+
+Ubah flow supaya:
+
+1. Cek `hasSessionCookie()` lebih dulu.
+2. Jika cookie tidak ada:
+   - `setUser(null)`
+   - `setIsAuthReady(true)`
+   - **jangan panggil `refreshSession()`**
+3. Jika cookie ada:
+   - lanjutkan flow `refreshSession()` seperti sekarang.
+
+Contoh struktur:
+
+```js
+useEffect(() => {
+  let isMounted = true
+
+  if (!hasSessionCookie()) {
+    setUser(null)
+    setIsAuthReady(true)
+    return () => {
+      isMounted = false
+    }
+  }
+
+  refreshSession()
+    .then(...)
+    .catch(...)
+    .finally(...)
+
+  return () => {
+    isMounted = false
+  }
+}, [])
+```
+
+Import `hasSessionCookie` dari `src/services/api.js`.
+
+Catatan penting:
+
+- Tetap jaga guard `isMounted` untuk mencegah setState setelah unmount.
+- Jangan ubah behavior saat cookie ada.
+- Jangan redirect dari `AuthProvider`. Provider hanya set auth state.
+
+### Definition of Done
+
+- Guest user membuka `/` tanpa cookie `has_session` → tidak ada request `POST /api/auth/refresh`.
+- Guest user tetap melihat landing page normal.
+- `isAuthReady` tetap berubah jadi `true`, jadi app tidak stuck di loading.
+
+---
+
+## Task 4 — Pastikan Login dan Logout Tetap Sinkron dengan Cookie Backend
+
+### File
+
+`src/services/authService.js`
+
+### Instruksi
+
+Periksa flow berikut:
+
+- `login()` memanggil `/api/auth/login`.
+- Backend harus set cookie refresh token dan `has_session` dari response login.
+- Frontend tidak perlu set cookie manual.
+- `logout()` memanggil `/api/auth/logout`.
+- Backend harus clear cookie refresh token dan `has_session`.
+- Frontend cukup `setAccessToken(null)` seperti sekarang.
+
+Jangan tambahkan logic manual seperti:
+
+```js
+document.cookie = 'has_session=...'
+```
+
+Alasannya:
+
+- Cookie session harus dikontrol backend supaya expiry, domain, path, `SameSite`, dan `Secure` konsisten.
+- Kalau frontend set cookie sendiri, flag bisa tidak sinkron dengan refresh token.
+
+### Definition of Done
+
+- Setelah login sukses, browser punya cookie `has_session` dari backend.
+- Setelah logout sukses, cookie `has_session` hilang/expired.
+- Frontend tidak membuat atau menghapus cookie `has_session` manual.
+
+---
+
+## Task 5 — Manual QA
+
+### Skenario 1: Guest Tanpa Cookie
+
+Langkah:
+
+1. Clear cookies untuk domain app.
+2. Buka `/`.
+3. Buka DevTools → Network.
+
+Expected:
+
+- Tidak ada request `POST /api/auth/refresh`.
+- Landing page tampil.
+- Tidak stuck loading.
+
+### Skenario 2: Guest Buka Protected Route Tanpa Cookie
+
+Langkah:
+
+1. Clear cookies.
+2. Buka `/dashboard` langsung dari address bar.
+
+Expected:
+
+- Tidak ada request `POST /api/auth/refresh`.
+- User diarahkan ke `/login`.
+- Tidak ada infinite redirect.
+
+### Skenario 3: User Login Normal
+
+Langkah:
+
+1. Login dengan akun valid.
+2. Pastikan backend set cookie `has_session`.
+3. Refresh browser.
+
+Expected:
+
+- Ada request `POST /api/auth/refresh` saat app boot.
+- User tetap login.
+- Dashboard bisa dibuka.
+
+### Skenario 4: Cookie Flag Ada tapi Refresh Token Invalid
+
+Langkah:
+
+1. Buat kondisi `has_session` ada, tapi refresh token invalid/expired.
+2. Refresh browser.
+
+Expected:
+
+- Frontend mencoba `POST /api/auth/refresh` satu kali.
+- Jika gagal, user dianggap guest.
+- Access token lokal dibersihkan.
+- App tidak loop request refresh.
+
+---
+
+## Acceptance Criteria
+
+- Tidak ada refresh request saat `has_session` tidak ada.
+- Refresh request tetap jalan saat `has_session` ada.
+- Tidak ada perubahan visual UI.
+- Tidak ada token disimpan di `localStorage`.
+- Tidak ada cookie yang dibuat manual oleh frontend.
+- `npm run lint` lulus.
 
 ## Out of Scope
 
-- Ganti ke React Router. Kalau memang mau pindah, buat RFC terpisah.
-- Role-based permission di dalam workspace (owner/admin/watcher). Itu issue lain.
-- Server-side authorization. Asumsinya backend sudah benar; kita hanya memperbaiki pengalaman client.
+- Mengubah backend cookie settings.
+- Mengubah nama endpoint auth.
+- Menambah remember-me.
+- Mengubah routing guard.
+- Menyimpan refresh token di frontend.
 

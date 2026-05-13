@@ -1,5 +1,18 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
+const SESSION_COOKIE_NAME = 'has_session'
+
+export const hasSessionCookie = () => {
+  if (typeof document === 'undefined') {
+    return false
+  }
+
+  return document.cookie
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .some((cookie) => cookie.startsWith(`${SESSION_COOKIE_NAME}=`))
+}
+
 const listeners = new Set()
 export const onAuthEvent = (listener) => {
   listeners.add(listener)
@@ -139,6 +152,11 @@ export const request = async (path, options = {}) => {
 }
 
 export const refreshAccessToken = async () => {
+  if (!hasSessionCookie()) {
+    setAccessToken(null)
+    return false
+  }
+
   if (!refreshPromise) {
     refreshPromise = request('/api/auth/refresh', {
       method: 'POST',

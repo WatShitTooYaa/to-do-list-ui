@@ -79,7 +79,7 @@ export function TodoProvider({ children }) {
             setTasks((currentTasks) =>
                 currentTasks.map((task) =>
                     task.id === taskId
-                        ? { ...task, ...nextUpdates, ...(updatedTask ?? {}) }
+                        ? { ...task, ...nextUpdates, ...(updatedTask?.id ? updatedTask : {}) }
                         : task,
                 ),
             )

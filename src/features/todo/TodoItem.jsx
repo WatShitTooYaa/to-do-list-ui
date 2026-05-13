@@ -33,7 +33,6 @@ export function TodoItem({ task, index, onToggle, onDelete, onUpdate }) {
     const handleToggle = async () => {
         setIsProcessingToggle(true)
         try {
-            await new Promise(resolve => setTimeout(resolve, 350))
             await onToggle(task.id)
         } finally {
             setIsProcessingToggle(false)
@@ -43,7 +42,6 @@ export function TodoItem({ task, index, onToggle, onDelete, onUpdate }) {
     const handleDelete = async () => {
         setIsProcessingDelete(true)
         try {
-            await new Promise(resolve => setTimeout(resolve, 350))
             await onDelete(task.id)
         } finally {
             setIsProcessingDelete(false)
