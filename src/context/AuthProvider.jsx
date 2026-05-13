@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AuthContext } from './authContextValue'
+import { hasSessionCookie } from '../services/api'
 import {
   login as loginService,
   logout as logoutService,
@@ -9,11 +10,17 @@ import {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [isAuthReady, setIsAuthReady] = useState(false)
+  const [isAuthReady, setIsAuthReady] = useState(() => !hasSessionCookie())
   const [authError, setAuthError] = useState('')
 
   useEffect(() => {
     let isMounted = true
+
+    if (!hasSessionCookie()) {
+      return () => {
+        isMounted = false
+      }
+    }
 
     refreshSession()
       .then((sessionUser) => {
