@@ -16,7 +16,7 @@ const pickTaskCompleted = (task) =>
         task?.status === 'done',
     )
 
-const toDateInputValue = (deadline) => {
+export const toDateInputValue = (deadline) => {
     if (!deadline) {
         return ''
     }
@@ -41,7 +41,7 @@ const toDateInputValue = (deadline) => {
     return date.toISOString().slice(0, 10)
 }
 
-const toApiDeadline = (deadline) => {
+export const toApiDeadline = (deadline) => {
     if (!deadline) {
         return null
     }
@@ -69,7 +69,7 @@ const unwrapTasks = (data) => {
     return []
 }
 
-const unwrapTask = (data) => data?.data?.task ?? data?.task ?? data?.data ?? data
+export const unwrapTask = (data) => data?.data?.task ?? data?.task ?? data?.data ?? data
 
 export const normalizeTask = (task) => {
     if (!task) {
