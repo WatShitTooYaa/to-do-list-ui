@@ -7,6 +7,7 @@ import {
     getTasks,
     updateTask as updateTaskService,
 } from '../services/taskService'
+import { mergeUpdatedTask } from './todoUtils'
 
 export function TodoProvider({ children }) {
     const { user } = useAuth()
@@ -79,7 +80,7 @@ export function TodoProvider({ children }) {
             setTasks((currentTasks) =>
                 currentTasks.map((task) =>
                     task.id === taskId
-                        ? { ...task, ...nextUpdates, ...(updatedTask?.id ? updatedTask : {}) }
+                        ? mergeUpdatedTask(task, nextUpdates, updatedTask)
                         : task,
                 ),
             )
